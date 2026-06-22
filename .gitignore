@@ -15,7 +15,11 @@ backend/dist-newstyle/
 node_modules/
 
 # Uploaded photos (managed at runtime)
-photos/
+photos/*.jpg
+photos/*.jpeg
+photos/*.png
+photos/*.gif
+photos/*.webp
 
 # Database files (local dev only)
 *.db

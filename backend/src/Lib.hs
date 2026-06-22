@@ -17,21 +17,26 @@
 
 module Lib (startApp) where
 
+import Control.Monad (zipWithM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Logger (runNoLoggingT)
 import Control.Monad.Reader (ReaderT, ask, runReaderT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Time (formatTime, getCurrentTime, defaultTimeLocale)
 import Database.Persist
 import Database.Persist.Sqlite
 import Database.Persist.TH
 import GHC.Generics (Generic)
 import Network.Wai (Application)
+import Network.Wai.Application.Static (defaultWebAppSettings, staticApp)
 import Network.Wai.Handler.Warp (run)
 import Servant
+import Servant.Multipart
+import System.Directory (copyFile, createDirectoryIfMissing)
+import System.FilePath (takeExtension, (</>))
 
--- | Database schema — tags and photos stored as comma-separated text for now
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 MemoryDb
   title       Text
@@ -44,7 +49,6 @@ MemoryDb
   deriving Show
 |]
 
--- | JSON response type for the API
 data Memory = Memory
   { memoryId          :: Int
   , memoryTitle       :: String
@@ -59,7 +63,6 @@ data Memory = Memory
 instance FromJSON Memory
 instance ToJSON Memory
 
--- | Request body for creating or updating a memory
 data MemoryInput = MemoryInput
   { inputTitle       :: String
   , inputTimeFrom    :: String
@@ -73,7 +76,6 @@ data MemoryInput = MemoryInput
 instance FromJSON MemoryInput
 instance ToJSON MemoryInput
 
--- | Convert a DB row to the API response type
 toMemory :: Entity MemoryDb -> Memory
 toMemory (Entity key db) = Memory
   { memoryId          = fromIntegral (fromSqlKey key)
@@ -94,19 +96,20 @@ splitComma t
 joinComma :: [String] -> Text
 joinComma = T.intercalate "," . map T.pack
 
--- | Application monad: Handler extended with a DB connection pool
 type AppM = ReaderT ConnectionPool Handler
 
--- | Run a database action inside AppM
 runDB :: ReaderT SqlBackend IO a -> AppM a
 runDB action = ask >>= liftIO . runSqlPool action
 
--- | Servant API type
 type MemoryAPI =
        "api" :> "memories" :> Get '[JSON] [Memory]
   :<|> "api" :> "memories" :> ReqBody '[JSON] MemoryInput :> Post '[JSON] Memory
   :<|> "api" :> "memories" :> Capture "id" Int :> ReqBody '[JSON] MemoryInput :> Put '[JSON] Memory
   :<|> "api" :> "memories" :> Capture "id" Int :> Delete '[JSON] NoContent
+
+type PhotoAPI = "api" :> "photos" :> MultipartForm Tmp (MultipartData Tmp) :> Post '[JSON] [String]
+
+type FullAPI = MemoryAPI :<|> PhotoAPI :<|> "photos" :> Raw
 
 memoryServer :: ServerT MemoryAPI AppM
 memoryServer =
@@ -163,14 +166,34 @@ deleteMemory memId = do
       runDB $ delete key
       return NoContent
 
+photosDir :: FilePath
+photosDir = "photos"
+
+uploadPhotos :: MultipartData Tmp -> Handler [String]
+uploadPhotos multipartData = liftIO $ do
+  createDirectoryIfMissing True photosDir
+  now <- getCurrentTime
+  let ts = formatTime defaultTimeLocale "%Y%m%d%H%M%S" now
+  zipWithM (saveFile ts) [1 :: Int ..] (files multipartData)
+  where
+    saveFile ts idx fd = do
+      let ext  = takeExtension (T.unpack (fdFileName fd))
+          name = ts ++ show idx ++ ext
+          dest = photosDir </> name
+      copyFile (fdPayload fd) dest
+      return name
+
 app :: ConnectionPool -> Application
 app pool =
-  serve (Proxy :: Proxy MemoryAPI) $
+  serve (Proxy :: Proxy FullAPI) $
     hoistServer (Proxy :: Proxy MemoryAPI) (`runReaderT` pool) memoryServer
+    :<|> uploadPhotos
+    :<|> Tagged (staticApp (defaultWebAppSettings photosDir))
 
 startApp :: IO ()
 startApp = do
   pool <- runNoLoggingT $ createSqlitePool "memory-diary.db" 5
   runSqlPool (runMigration migrateAll) pool
+  createDirectoryIfMissing True photosDir
   putStrLn "Memory Diary starting on port 3000..."
   run 3000 (app pool)

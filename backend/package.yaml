@@ -15,14 +15,19 @@ dependencies:
 - base >= 4.7 && < 5
 - aeson
 - bytestring
+- directory
+- filepath
 - monad-logger
 - mtl
 - persistent
 - persistent-sqlite
 - servant
+- servant-multipart
 - servant-server
 - text
+- time
 - wai
+- wai-app-static
 - warp
 
 ghc-options:
