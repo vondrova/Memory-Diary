@@ -1,0 +1,38 @@
+# Build outputs
+main.js
+frontend/main.js
+
+# Elm
+frontend/elm-stuff/
+frontend/.elm-home/
+frontend/node_modules/
+
+# Haskell / Stack
+backend/.stack-work/
+backend/dist-newstyle/
+
+# Node
+node_modules/
+
+# Uploaded photos (managed at runtime)
+photos/
+
+# Database files (local dev only)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+.github/
+.claude/
+.codex/
+.agents/
+*.swp
+*~
