@@ -20,7 +20,7 @@ dependencies:
 - monad-logger
 - mtl
 - persistent
-- persistent-sqlite
+- persistent-postgresql
 - servant
 - servant-multipart
 - servant-server

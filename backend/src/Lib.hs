@@ -22,12 +22,15 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Logger (runNoLoggingT)
 import Control.Monad.Reader (ReaderT, ask, runReaderT)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.ByteString.Char8 (pack)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time (formatTime, getCurrentTime, defaultTimeLocale)
 import Database.Persist
-import Database.Persist.Sqlite
+import Database.Persist.Postgresql
 import Database.Persist.TH
+import System.Environment (lookupEnv)
 import GHC.Generics (Generic)
 import Network.Wai (Application)
 import Network.Wai.Application.Static (defaultWebAppSettings, staticApp)
@@ -192,7 +195,8 @@ app pool =
 
 startApp :: IO ()
 startApp = do
-  pool <- runNoLoggingT $ createSqlitePool "memory-diary.db" 5
+  dbUrl <- fromMaybe "postgresql://memory_diary:memory_diary@localhost:5432/memory_diary" <$> lookupEnv "DATABASE_URL"
+  pool  <- runNoLoggingT $ createPostgresqlPool (pack dbUrl) 10
   runSqlPool (runMigration migrateAll) pool
   createDirectoryIfMissing True photosDir
   putStrLn "Memory Diary starting on port 3000..."
