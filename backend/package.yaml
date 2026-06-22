@@ -15,6 +15,10 @@ dependencies:
 - base >= 4.7 && < 5
 - aeson
 - bytestring
+- monad-logger
+- mtl
+- persistent
+- persistent-sqlite
 - servant
 - servant-server
 - text
