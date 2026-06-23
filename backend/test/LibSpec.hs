@@ -4,7 +4,7 @@ import Data.Text (pack)
 import Data.Time.Calendar (fromGregorian)
 import Test.Hspec
 import Data.Time.Calendar (diffDays)
-import Lib (computeNextOccurrence, durMins, joinComma, parseDay, splitComma, topN)
+import Lib (computeNextOccurrence, durMins, joinComma, monthDay, parseDay, splitComma, topN)
 
 spec :: Spec
 spec = do
@@ -91,3 +91,16 @@ spec = do
     it "computes 0 days for same date" $ do
       let d = fromGregorian 2024 1 1
       diffDays d d `shouldBe` 0
+
+  describe "monthDay" $ do
+    it "extracts MM-DD from a YYYY-MM-DD date string" $
+      monthDay "2024-06-23" `shouldBe` "06-23"
+
+    it "extracts MM-DD from a full datetime string" $
+      monthDay "2024-06-23T10:30" `shouldBe` "06-23"
+
+    it "matches two dates with the same month and day" $
+      monthDay "2020-12-25" `shouldBe` monthDay "2024-12-25"
+
+    it "does not match dates with different month or day" $
+      monthDay "2024-06-23" `shouldSatisfy` (/= monthDay "2024-06-24")

@@ -15,7 +15,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Lib (startApp, durMins, topN, splitComma, joinComma, computeNextOccurrence, parseDay) where
+module Lib (startApp, durMins, topN, splitComma, joinComma, computeNextOccurrence, parseDay, monthDay) where
 
 import Control.Monad (zipWithM)
 import Control.Monad.IO.Class (liftIO)
@@ -136,7 +136,7 @@ type MemoryAPI =
 
 type PhotoAPI = "api" :> "photos" :> MultipartForm Tmp (MultipartData Tmp) :> Post '[JSON] [String]
 
-type FullAPI = MemoryAPI :<|> ImportantDayAPI :<|> RelationshipAPI :<|> StatsAPI :<|> PhotoAPI :<|> "photos" :> Raw
+type FullAPI = MemoryAPI :<|> ImportantDayAPI :<|> RelationshipAPI :<|> OnThisDayAPI :<|> StatsAPI :<|> PhotoAPI :<|> "photos" :> Raw
 
 memoryServer :: ServerT MemoryAPI AppM
 memoryServer =
@@ -405,6 +405,49 @@ upsertRelationship input = do
     (Entity k _ : _) -> runDB (replace k db) >> return k
   return (toRelationship today (Entity key db))
 
+monthDay :: String -> String
+monthDay s = take 5 (drop 5 s)
+
+data OnThisDay = OnThisDay
+  { onThisDayMemories      :: [Memory]
+  , onThisDayImportantDays :: [ImportantDay]
+  , onThisDayIsAnniversary :: Bool
+  , onThisDayYears         :: Maybe Int
+  } deriving (Show, Generic)
+
+instance FromJSON OnThisDay
+instance ToJSON OnThisDay
+
+type OnThisDayAPI = "api" :> "on-this-day" :> Get '[JSON] OnThisDay
+
+getOnThisDay :: AppM OnThisDay
+getOnThisDay = do
+  today <- liftIO $ utctDay <$> getCurrentTime
+  let todayMD = formatTime defaultTimeLocale "%m-%d" today
+
+  memEntities <- runDB $ selectList [] []
+  let todayMems = filter (\m -> monthDay (memoryTimeFrom m) == todayMD)
+                         (map toMemory memEntities)
+
+  dayEntities <- runDB $ selectList [] []
+  let todayDays = filter (\d -> monthDay (importantDayDate d) == todayMD)
+                         (map (toImportantDay today) dayEntities)
+
+  relEntities <- runDB $ (selectList [] [LimitTo 1] :: ReaderT SqlBackend IO [Entity RelationshipDb])
+  let mRel    = case relEntities of
+                  []      -> Nothing
+                  (e : _) -> Just (toRelationship today e)
+  let isAnniv = maybe False (\r -> monthDay (relationshipStartDate r) == todayMD
+                                && relationshipStartDate r /= formatDay today) mRel
+  let years   = if isAnniv then fmap relationshipYearsTogether mRel else Nothing
+
+  return $ OnThisDay
+    { onThisDayMemories      = todayMems
+    , onThisDayImportantDays = todayDays
+    , onThisDayIsAnniversary = isAnniv
+    , onThisDayYears         = years
+    }
+
 data Stats = Stats
   { statsTotalMinutes    :: Int
   , statsMemoryCount     :: Int
@@ -492,10 +535,11 @@ uploadPhotos multipartData = liftIO $ do
 app :: ConnectionPool -> Application
 app pool =
   serve (Proxy :: Proxy FullAPI) $
-    hoistServer (Proxy :: Proxy MemoryAPI)          (`runReaderT` pool) memoryServer
-    :<|> hoistServer (Proxy :: Proxy ImportantDayAPI)  (`runReaderT` pool) importantDayServer
-    :<|> hoistServer (Proxy :: Proxy RelationshipAPI)  (`runReaderT` pool) relationshipServer
-    :<|> hoistServer (Proxy :: Proxy StatsAPI)      (`runReaderT` pool) getStats
+    hoistServer (Proxy :: Proxy MemoryAPI)           (`runReaderT` pool) memoryServer
+    :<|> hoistServer (Proxy :: Proxy ImportantDayAPI)   (`runReaderT` pool) importantDayServer
+    :<|> hoistServer (Proxy :: Proxy RelationshipAPI)   (`runReaderT` pool) relationshipServer
+    :<|> hoistServer (Proxy :: Proxy OnThisDayAPI)      (`runReaderT` pool) getOnThisDay
+    :<|> hoistServer (Proxy :: Proxy StatsAPI)       (`runReaderT` pool) getStats
     :<|> uploadPhotos
     :<|> Tagged (staticApp (defaultWebAppSettings photosDir))
 
