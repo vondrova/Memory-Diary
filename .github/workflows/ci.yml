@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  frontend:
+    name: Elm build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Elm
+        run: |
+          curl -sL https://github.com/elm/compiler/releases/download/0.19.1/binary-for-linux-64-bit.gz \
+            | gunzip > /usr/local/bin/elm && chmod +x /usr/local/bin/elm
+
+      - name: Build Elm frontend
+        working-directory: frontend
+        run: elm make src/Main.elm --output=/dev/null
+
+  backend:
+    name: Haskell build & test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: memory_diary
+          POSTGRES_PASSWORD: memory_diary
+          POSTGRES_DB: memory_diary_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpq-dev postgresql-client pkg-config
+
+      - name: Cache Stack global packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.stack
+          key: stack-global-${{ hashFiles('backend/stack.yaml', 'backend/package.yaml') }}
+          restore-keys: stack-global-
+
+      - name: Cache .stack-work
+        uses: actions/cache@v4
+        with:
+          path: backend/.stack-work
+          key: stack-work-${{ hashFiles('backend/stack.yaml', 'backend/package.yaml', 'backend/src/**', 'backend/test/**') }}
+          restore-keys: stack-work-
+
+      - name: Build dependencies
+        working-directory: backend
+        run: stack build --install-ghc --only-dependencies
+
+      - name: Build
+        working-directory: backend
+        run: stack build
+
+      - name: Run tests
+        working-directory: backend
+        run: stack test

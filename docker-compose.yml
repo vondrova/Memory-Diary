@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: memory_diary
+      POSTGRES_USER: memory_diary
+      POSTGRES_PASSWORD: memory_diary
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  memory-diary:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://memory_diary:memory_diary@postgres:5432/memory_diary
+    volumes:
+      - ./photos:/app/photos
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
