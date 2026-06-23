@@ -14,6 +14,89 @@ body {
     background: #2c3e50;
     color: white;
     padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.header-title {
+    font-size: 1.25rem;
+    white-space: nowrap;
+}
+
+.nav {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.nav-link {
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.nav-link:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link--active {
+    color: white;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.page-actions {
+    margin-bottom: 1.25rem;
+}
+
+.timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-left: 2px solid #ddd;
+    padding-left: 1.5rem;
+    margin-left: 0.5rem;
+}
+
+.timeline-item {
+    position: relative;
+    padding: 0.5rem 0 0.75rem;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -1.75rem;
+    top: 0.65rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #2980b9;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px #2980b9;
+}
+
+.timeline-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.timeline-date {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.timeline-location {
+    color: #666;
+    font-size: 0.875rem;
+}
+
+.not-found {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
 }
 
 .main {

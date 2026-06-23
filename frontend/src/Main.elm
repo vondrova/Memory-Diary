@@ -1,12 +1,21 @@
 module Main exposing (main)
 
 import Browser
+import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Json.Decode as D
 import Json.Encode as E
+import Url exposing (Url)
+import Url.Parser as Parser exposing (Parser, oneOf, top)
+
+
+type Page
+    = HomePage
+    | TimelinePage
+    | NotFoundPage
 
 
 type alias Memory =
@@ -22,7 +31,9 @@ type alias Memory =
 
 
 type alias Model =
-    { memories : List Memory
+    { key : Nav.Key
+    , page : Page
+    , memories : List Memory
     , error : Maybe String
     , formOpen : Bool
     , formTitle : String
@@ -35,7 +46,9 @@ type alias Model =
 
 
 type Msg
-    = GotMemories (Result Http.Error (List Memory))
+    = LinkClicked Browser.UrlRequest
+    | UrlChanged Url
+    | GotMemories (Result Http.Error (List Memory))
     | OpenForm
     | CloseForm
     | SetTitle String
@@ -48,9 +61,24 @@ type Msg
     | MemoryCreated (Result Http.Error Memory)
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( { memories = []
+routeParser : Parser (Page -> a) a
+routeParser =
+    oneOf
+        [ Parser.map HomePage top
+        , Parser.map TimelinePage (Parser.s "timeline")
+        ]
+
+
+fromUrl : Url -> Page
+fromUrl url =
+    Maybe.withDefault NotFoundPage (Parser.parse routeParser url)
+
+
+init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init _ url key =
+    ( { key = key
+      , page = fromUrl url
+      , memories = []
       , error = Nothing
       , formOpen = False
       , formTitle = ""
@@ -67,6 +95,15 @@ init _ =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        LinkClicked (Browser.Internal url) ->
+            ( model, Nav.pushUrl model.key (Url.toString url) )
+
+        LinkClicked (Browser.External href) ->
+            ( model, Nav.load href )
+
+        UrlChanged url ->
+            ( { model | page = fromUrl url }, Cmd.none )
+
         GotMemories (Ok mems) ->
             ( { model | memories = mems, error = Nothing }, Cmd.none )
 
@@ -180,10 +217,7 @@ view model =
     { title = "Memory Diary"
     , body =
         [ div [ class "app" ]
-            [ header [ class "header" ]
-                [ h1 [] [ text "Memory Diary" ]
-                , button [ class "btn-primary", onClick OpenForm ] [ text "+ Přidat vzpomínku" ]
-                ]
+            [ viewHeader model.page
             , main_ [ class "main" ]
                 [ case model.error of
                     Just err ->
@@ -191,6 +225,46 @@ view model =
 
                     Nothing ->
                         text ""
+                , viewPage model
+                ]
+            ]
+        ]
+    }
+
+
+viewHeader : Page -> Html Msg
+viewHeader page =
+    header [ class "header" ]
+        [ h1 [ class "header-title" ] [ text "Memory Diary" ]
+        , nav [ class "nav" ]
+            [ navLink "/" "Vzpomínky" (page == HomePage)
+            , navLink "/timeline" "Timeline" (page == TimelinePage)
+            ]
+        ]
+
+
+navLink : String -> String -> Bool -> Html Msg
+navLink href_ label_ active =
+    a
+        [ href href_
+        , class
+            (if active then
+                "nav-link nav-link--active"
+
+             else
+                "nav-link"
+            )
+        ]
+        [ text label_ ]
+
+
+viewPage : Model -> Html Msg
+viewPage model =
+    case model.page of
+        HomePage ->
+            div []
+                [ div [ class "page-actions" ]
+                    [ button [ class "btn-primary", onClick OpenForm ] [ text "+ Přidat vzpomínku" ] ]
                 , if model.formOpen then
                     viewForm model
 
@@ -199,9 +273,13 @@ view model =
                 , div [ class "memory-list" ]
                     (List.map viewMemory model.memories)
                 ]
-            ]
-        ]
-    }
+
+        TimelinePage ->
+            div [ class "timeline" ]
+                (List.map viewTimelineItem model.memories)
+
+        NotFoundPage ->
+            div [ class "not-found" ] [ text "Stránka nenalezena." ]
 
 
 viewForm : Model -> Html Msg
@@ -251,10 +329,29 @@ viewMemory mem =
         ]
 
 
+viewTimelineItem : Memory -> Html Msg
+viewTimelineItem mem =
+    div [ class "timeline-item" ]
+        [ div [ class "timeline-dot" ] []
+        , div [ class "timeline-content" ]
+            [ span [ class "timeline-date" ] [ text mem.timeFrom ]
+            , strong [] [ text mem.title ]
+            , case mem.location of
+                Just loc ->
+                    span [ class "timeline-location" ] [ text (" · " ++ loc) ]
+
+                Nothing ->
+                    text ""
+            ]
+        ]
+
+
 main : Program () Model Msg
 main =
-    Browser.document
+    Browser.application
         { init = init
+        , onUrlRequest = LinkClicked
+        , onUrlChange = UrlChanged
         , update = update
         , view = view
         , subscriptions = \_ -> Sub.none
