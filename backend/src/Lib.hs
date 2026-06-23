@@ -1,44 +1,36 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-module Lib (startApp, Memory(..), durMins, topN, splitComma, joinComma, computeNextOccurrence, parseDay, monthDay, computeStats, Stats(..)) where
+module Lib
+  ( startApp
+  , Memory (..)
+  , Stats (..)
+  , durMins
+  , topN
+  , splitComma
+  , joinComma
+  , computeNextOccurrence
+  , parseDay
+  , monthDay
+  , computeStats
+  ) where
 
 import Control.Monad (zipWithM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Logger (runNoLoggingT)
 import Control.Monad.Reader (ReaderT, ask, runReaderT)
-import Data.Aeson (FromJSON (..), ToJSON (..), Options, defaultOptions, decode, genericToJSON, genericParseJSON, object, withObject, (.=), (.:))
-import Data.Aeson (fieldLabelModifier)
+import Data.Aeson (decode)
 import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString.Lazy as LBS
-import Data.Char (toLower)
-import Data.List (group, isPrefixOf, maximumBy, nub, sort, sortBy, stripPrefix)
-import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Ord (Down (..), comparing)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Time (UTCTime, diffUTCTime, formatTime, getCurrentTime, utctDay)
-import Data.Time.Calendar (Day, diffDays, fromGregorian, toGregorian)
-import Data.Time.Format (defaultTimeLocale, parseTimeM)
-import Database.Persist
-import Database.Persist.Postgresql
-import Database.Persist.TH
-import System.Environment (lookupEnv)
-import GHC.Generics (Generic)
+import Data.Time (UTCTime, formatTime, getCurrentTime, utctDay)
+import Data.Time.Format (defaultTimeLocale)
+import Domain.Aggregation (computeStats, durMins, topN)
+import Domain.Recurrence (computeNextOccurrence, monthDay, parseDay, formatDay)
+import Models
 import Network.HTTP.Simple (getResponseBody, httpLBS, parseRequest, setRequestHeader)
 import Network.Wai (Application)
 import Network.Wai.Application.Static (defaultWebAppSettings, staticApp)
@@ -46,113 +38,14 @@ import Network.Wai.Handler.Warp (run)
 import Servant
 import Servant.Multipart
 import System.Directory (copyFile, createDirectoryIfMissing)
+import System.Environment (lookupEnv)
 import System.FilePath (takeExtension, (</>))
-
-share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
-MemoryDb
-  title       Text
-  timeFrom    Text
-  timeTo      Text
-  description Text Maybe
-  location    Text Maybe
-  tags        Text
-  photos      Text
-  deriving Show
-
-ImportantDayDb
-  title Text
-  date  Text
-  note  Text Maybe
-  kind  Text
-  deriving Show
-
-RelationshipDb
-  partner1  Text
-  partner2  Text
-  startDate Text
-  note      Text Maybe
-  deriving Show
-
-CoupleNoteDb
-  owner     Text
-  title     Text
-  body      Text
-  createdAt Text
-  deriving Show
-
-CouplePlanDb
-  category Text
-  title    Text
-  detail   Text Maybe
-  done     Bool
-  deriving Show
-
-DiaryEntryDb
-  date    Text
-  mood    Text Maybe
-  body    Text
-  weather Text Maybe
-  deriving Show
-|]
-
-data Memory = Memory
-  { memoryId          :: Int
-  , memoryTitle       :: String
-  , memoryTimeFrom    :: String
-  , memoryTimeTo      :: String
-  , memoryDescription :: Maybe String
-  , memoryLocation    :: Maybe String
-  , memoryTags        :: [String]
-  , memoryPhotos      :: [String]
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON Memory where parseJSON = genericParseJSON (aesonOpts "memory")
-instance ToJSON Memory where toJSON = genericToJSON (aesonOpts "memory")
-
-data MemoryInput = MemoryInput
-  { inputTitle       :: String
-  , inputTimeFrom    :: String
-  , inputTimeTo      :: String
-  , inputDescription :: Maybe String
-  , inputLocation    :: Maybe String
-  , inputTags        :: [String]
-  , inputPhotos      :: [String]
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON MemoryInput where parseJSON = genericParseJSON (aesonOpts "input")
-instance ToJSON MemoryInput where toJSON = genericToJSON (aesonOpts "input")
-
-toMemory :: Entity MemoryDb -> Memory
-toMemory (Entity key db) = Memory
-  { memoryId          = fromIntegral (fromSqlKey key)
-  , memoryTitle       = T.unpack (memoryDbTitle db)
-  , memoryTimeFrom    = T.unpack (memoryDbTimeFrom db)
-  , memoryTimeTo      = T.unpack (memoryDbTimeTo db)
-  , memoryDescription = T.unpack <$> memoryDbDescription db
-  , memoryLocation    = T.unpack <$> memoryDbLocation db
-  , memoryTags        = splitComma (memoryDbTags db)
-  , memoryPhotos      = splitComma (memoryDbPhotos db)
-  }
-
-splitComma :: Text -> [String]
-splitComma t
-  | T.null t  = []
-  | otherwise = map T.unpack (T.splitOn "," t)
-
-joinComma :: [String] -> Text
-joinComma = T.intercalate "," . map T.pack
+import Types
 
 type AppM = ReaderT ConnectionPool Handler
 
 runDB :: ReaderT SqlBackend IO a -> AppM a
 runDB action = ask >>= liftIO . runSqlPool action
-
-aesonOpts :: String -> Options
-aesonOpts prefix = defaultOptions
-  { fieldLabelModifier = \s -> case stripPrefix prefix s of
-      Just (c : cs) -> toLower c : cs
-      _             -> s
-  }
 
 type MemoryAPI =
        "api" :> "memories"
@@ -165,6 +58,40 @@ type MemoryAPI =
   :<|> "api" :> "memories" :> ReqBody '[JSON] MemoryInput :> Post '[JSON] Memory
   :<|> "api" :> "memories" :> Capture "id" Int :> ReqBody '[JSON] MemoryInput :> Put '[JSON] Memory
   :<|> "api" :> "memories" :> Capture "id" Int :> Delete '[JSON] NoContent
+
+type ImportantDayAPI =
+       "api" :> "important-days" :> Get '[JSON] [ImportantDay]
+  :<|> "api" :> "important-days" :> ReqBody '[JSON] ImportantDayInput :> Post '[JSON] ImportantDay
+  :<|> "api" :> "important-days" :> Capture "id" Int :> ReqBody '[JSON] ImportantDayInput :> Put '[JSON] ImportantDay
+  :<|> "api" :> "important-days" :> Capture "id" Int :> Delete '[JSON] NoContent
+
+type RelationshipAPI =
+       "api" :> "relationship" :> Get '[JSON] (Maybe Relationship)
+  :<|> "api" :> "relationship" :> ReqBody '[JSON] RelationshipInput :> Put '[JSON] Relationship
+
+type OnThisDayAPI = "api" :> "on-this-day" :> Get '[JSON] OnThisDay
+
+type NoteAPI =
+       "api" :> "notes" :> Get '[JSON] [CoupleNote]
+  :<|> "api" :> "notes" :> ReqBody '[JSON] CoupleNoteInput :> Post '[JSON] CoupleNote
+  :<|> "api" :> "notes" :> Capture "id" Int :> ReqBody '[JSON] CoupleNoteInput :> Put '[JSON] CoupleNote
+  :<|> "api" :> "notes" :> Capture "id" Int :> Delete '[JSON] NoContent
+
+type PlanAPI =
+       "api" :> "plans" :> Get '[JSON] [CouplePlan]
+  :<|> "api" :> "plans" :> ReqBody '[JSON] CouplePlanInput :> Post '[JSON] CouplePlan
+  :<|> "api" :> "plans" :> Capture "id" Int :> ReqBody '[JSON] CouplePlanInput :> Put '[JSON] CouplePlan
+  :<|> "api" :> "plans" :> Capture "id" Int :> Delete '[JSON] NoContent
+
+type DiaryAPI =
+       "api" :> "diary" :> Get '[JSON] [DiaryEntry]
+  :<|> "api" :> "diary" :> ReqBody '[JSON] DiaryEntryInput :> Post '[JSON] DiaryEntry
+  :<|> "api" :> "diary" :> Capture "id" Int :> ReqBody '[JSON] DiaryEntryInput :> Put '[JSON] DiaryEntry
+  :<|> "api" :> "diary" :> Capture "id" Int :> Delete '[JSON] NoContent
+
+type StatsAPI = "api" :> "stats" :> Get '[JSON] Stats
+
+type GeoAPI = "api" :> "geocode" :> QueryParam "q" Text :> Get '[JSON] [GeoResult]
 
 type PhotoAPI = "api" :> "photos" :> MultipartForm Tmp (MultipartData Tmp) :> Post '[JSON] [String]
 
@@ -181,12 +108,10 @@ type FullAPI =
   :<|> PhotoAPI
   :<|> "photos" :> Raw
 
+-- MEMORY HANDLERS
+
 memoryServer :: ServerT MemoryAPI AppM
-memoryServer =
-       getMemories
-  :<|> createMemory
-  :<|> updateMemory
-  :<|> deleteMemory
+memoryServer = getMemories :<|> createMemory :<|> updateMemory :<|> deleteMemory
 
 getMemories :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> AppM [Memory]
 getMemories mq mTag mLoc mFrom mTo = do
@@ -202,16 +127,12 @@ matchesFilter mq mTag mLoc mFrom mTo mem =
       let ql = T.toLower q
       in T.isInfixOf ql (T.toLower (T.pack (memoryTitle mem)))
          || maybe False (T.isInfixOf ql . T.toLower . T.pack) (memoryDescription mem)
-
     matchTag Nothing    = True
     matchTag (Just tag) = T.unpack tag `elem` memoryTags mem
-
     matchLoc Nothing    = True
     matchLoc (Just loc) = maybe False (T.isInfixOf (T.toLower loc) . T.toLower . T.pack) (memoryLocation mem)
-
     matchFrom Nothing     = True
     matchFrom (Just from) = T.unpack from <= memoryTimeFrom mem
-
     matchTo Nothing   = True
     matchTo (Just to) = memoryTimeTo mem <= T.unpack to
 
@@ -254,74 +175,9 @@ deleteMemory memId = do
   existing <- runDB $ get key
   case existing of
     Nothing -> throwError err404
-    Just _  -> do
-      runDB $ delete key
-      return NoContent
+    Just _  -> runDB (delete key) >> return NoContent
 
-data ImportantDay = ImportantDay
-  { importantDayId             :: Maybe Int
-  , importantDayTitle          :: String
-  , importantDayDate           :: String
-  , importantDayNote           :: Maybe String
-  , importantDayKind           :: String
-  , importantDayNextOccurrence :: String
-  , importantDayDaysUntil      :: Int
-  , importantDayMonth          :: Int
-  , importantDayDay            :: Int
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON ImportantDay where parseJSON = genericParseJSON (aesonOpts "importantDay")
-instance ToJSON ImportantDay where toJSON = genericToJSON (aesonOpts "importantDay")
-
-data ImportantDayInput = ImportantDayInput
-  { importantDayInputTitle :: String
-  , importantDayInputDate  :: String
-  , importantDayInputNote  :: Maybe String
-  , importantDayInputKind  :: String
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON ImportantDayInput where parseJSON = genericParseJSON (aesonOpts "importantDayInput")
-instance ToJSON ImportantDayInput where toJSON = genericToJSON (aesonOpts "importantDayInput")
-
-parseDay :: String -> Maybe Day
-parseDay = parseTimeM True defaultTimeLocale "%Y-%m-%d"
-
-formatDay :: Day -> String
-formatDay = formatTime defaultTimeLocale "%Y-%m-%d"
-
-computeNextOccurrence :: Day -> String -> (String, Int, Int, Int)
-computeNextOccurrence today dateStr =
-  case parseDay dateStr of
-    Nothing -> (dateStr, 0, 0, 0)
-    Just d  ->
-      let (_, m, dd)    = toGregorian d
-          (yr, _, _)    = toGregorian today
-          thisYearDate  = fromGregorian yr m dd
-          nextDate      = if today <= thisYearDate then thisYearDate
-                          else fromGregorian (yr + 1) m dd
-          days          = fromIntegral (diffDays nextDate today)
-      in (formatDay nextDate, days, fromIntegral m, fromIntegral dd)
-
-toImportantDay :: Day -> Entity ImportantDayDb -> ImportantDay
-toImportantDay today (Entity key db) =
-  let (nextOcc, days, month, day) = computeNextOccurrence today (T.unpack (importantDayDbDate db))
-  in ImportantDay
-    { importantDayId             = Just (fromIntegral (fromSqlKey key))
-    , importantDayTitle          = T.unpack (importantDayDbTitle db)
-    , importantDayDate           = T.unpack (importantDayDbDate db)
-    , importantDayNote           = T.unpack <$> importantDayDbNote db
-    , importantDayKind           = T.unpack (importantDayDbKind db)
-    , importantDayNextOccurrence = nextOcc
-    , importantDayDaysUntil      = days
-    , importantDayMonth          = month
-    , importantDayDay            = day
-    }
-
-type ImportantDayAPI =
-       "api" :> "important-days" :> Get '[JSON] [ImportantDay]
-  :<|> "api" :> "important-days" :> ReqBody '[JSON] ImportantDayInput :> Post '[JSON] ImportantDay
-  :<|> "api" :> "important-days" :> Capture "id" Int :> ReqBody '[JSON] ImportantDayInput :> Put '[JSON] ImportantDay
-  :<|> "api" :> "important-days" :> Capture "id" Int :> Delete '[JSON] NoContent
+-- IMPORTANT DAY HANDLERS
 
 importantDayServer :: ServerT ImportantDayAPI AppM
 importantDayServer =
@@ -371,56 +227,9 @@ deleteImportantDay dayId = do
   existing <- runDB $ get key
   case existing of
     Nothing -> throwError err404
-    Just _  -> do
-      runDB $ delete key
-      return NoContent
+    Just _  -> runDB (delete key) >> return NoContent
 
-data Relationship = Relationship
-  { relationshipId              :: Maybe Int
-  , relationshipPartner1        :: String
-  , relationshipPartner2        :: String
-  , relationshipStartDate       :: String
-  , relationshipNote            :: Maybe String
-  , relationshipDaysTogether    :: Int
-  , relationshipYearsTogether   :: Int
-  , relationshipNextAnniversary :: String
-  , relationshipDaysUntilAnniv  :: Int
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON Relationship where parseJSON = genericParseJSON (aesonOpts "relationship")
-instance ToJSON Relationship where toJSON = genericToJSON (aesonOpts "relationship")
-
-data RelationshipInput = RelationshipInput
-  { relationshipInputPartner1  :: String
-  , relationshipInputPartner2  :: String
-  , relationshipInputStartDate :: String
-  , relationshipInputNote      :: Maybe String
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON RelationshipInput where parseJSON = genericParseJSON (aesonOpts "relationshipInput")
-instance ToJSON RelationshipInput where toJSON = genericToJSON (aesonOpts "relationshipInput")
-
-toRelationship :: Day -> Entity RelationshipDb -> Relationship
-toRelationship today (Entity key db) =
-  let startStr = T.unpack (relationshipDbStartDate db)
-      daysTog  = maybe 0 (fromIntegral . diffDays today) (parseDay startStr)
-      yearsTog = daysTog `div` 365
-      (nextAnn, daysUntilAnn, _, _) = computeNextOccurrence today startStr
-  in Relationship
-    { relationshipId              = Just (fromIntegral (fromSqlKey key))
-    , relationshipPartner1        = T.unpack (relationshipDbPartner1 db)
-    , relationshipPartner2        = T.unpack (relationshipDbPartner2 db)
-    , relationshipStartDate       = startStr
-    , relationshipNote            = T.unpack <$> relationshipDbNote db
-    , relationshipDaysTogether    = daysTog
-    , relationshipYearsTogether   = yearsTog
-    , relationshipNextAnniversary = nextAnn
-    , relationshipDaysUntilAnniv  = daysUntilAnn
-    }
-
-type RelationshipAPI =
-       "api" :> "relationship" :> Get '[JSON] (Maybe Relationship)
-  :<|> "api" :> "relationship" :> ReqBody '[JSON] RelationshipInput :> Put '[JSON] Relationship
+-- RELATIONSHIP HANDLERS
 
 relationshipServer :: ServerT RelationshipAPI AppM
 relationshipServer = getRelationship :<|> upsertRelationship
@@ -444,24 +253,11 @@ upsertRelationship input = do
         , relationshipDbNote      = T.pack <$> relationshipInputNote input
         }
   key <- case entities of
-    []              -> runDB $ insert db
+    []               -> runDB $ insert db
     (Entity k _ : _) -> runDB (replace k db) >> return k
   return (toRelationship today (Entity key db))
 
-monthDay :: String -> String
-monthDay s = take 5 (drop 5 s)
-
-data OnThisDay = OnThisDay
-  { onThisDayMemories      :: [Memory]
-  , onThisDayImportantDays :: [ImportantDay]
-  , onThisDayIsAnniversary :: Bool
-  , onThisDayYears         :: Maybe Int
-  } deriving (Show, Generic)
-
-instance FromJSON OnThisDay where parseJSON = genericParseJSON (aesonOpts "onThisDay")
-instance ToJSON OnThisDay where toJSON = genericToJSON (aesonOpts "onThisDay")
-
-type OnThisDayAPI = "api" :> "on-this-day" :> Get '[JSON] OnThisDay
+-- ON-THIS-DAY HANDLER
 
 getOnThisDay :: AppM OnThisDay
 getOnThisDay = do
@@ -469,12 +265,10 @@ getOnThisDay = do
   let todayMD = formatTime defaultTimeLocale "%m-%d" today
 
   memEntities <- runDB $ selectList [] []
-  let todayMems = filter (\m -> monthDay (memoryTimeFrom m) == todayMD)
-                         (map toMemory memEntities)
+  let todayMems = filter (\m -> monthDay (memoryTimeFrom m) == todayMD) (map toMemory memEntities)
 
   dayEntities <- runDB $ selectList [] []
-  let todayDays = filter (\d -> monthDay (importantDayDate d) == todayMD)
-                         (map (toImportantDay today) dayEntities)
+  let todayDays = filter (\d -> monthDay (importantDayDate d) == todayMD) (map (toImportantDay today) dayEntities)
 
   relEntities <- runDB $ (selectList [] [LimitTo 1] :: ReaderT SqlBackend IO [Entity RelationshipDb])
   let mRel    = case relEntities of
@@ -491,126 +285,7 @@ getOnThisDay = do
     , onThisDayYears         = years
     }
 
-data Stats = Stats
-  { statsTotalMinutes    :: Int
-  , statsMemoryCount     :: Int
-  , statsPhotoCount      :: Int
-  , statsVisitedPlaces   :: Int
-  , statsAverageMinutes  :: Int
-  , statsLongestTitle    :: Maybe String
-  , statsLongestMinutes  :: Int
-  , statsTopTags         :: [(String, Int)]
-  , statsTopLocations    :: [(String, Int)]
-  , statsMonthlyActivity :: [(String, Int)]
-  , statsDailyActivity   :: [(String, Int)]
-  } deriving (Show, Generic)
-
-instance FromJSON Stats where parseJSON = genericParseJSON (aesonOpts "stats")
-instance ToJSON Stats where toJSON = genericToJSON (aesonOpts "stats")
-
-type StatsAPI = "api" :> "stats" :> Get '[JSON] Stats
-
-getStats :: AppM Stats
-getStats = do
-  entities <- runDB $ selectList [] []
-  return $ computeStats (map toMemory entities)
-
-computeStats :: [Memory] -> Stats
-computeStats mems = Stats
-  { statsTotalMinutes    = totalMins
-  , statsMemoryCount     = length mems
-  , statsPhotoCount      = sum (map (length . memoryPhotos) mems)
-  , statsVisitedPlaces   = length (nub (mapMaybe memoryLocation mems))
-  , statsAverageMinutes  = if null mems then 0 else totalMins `div` length mems
-  , statsLongestTitle    = memoryTitle <$> safeLongest
-  , statsLongestMinutes  = maybe 0 (\m -> durMins (memoryTimeFrom m) (memoryTimeTo m)) safeLongest
-  , statsTopTags         = topN 10 (concatMap memoryTags mems)
-  , statsTopLocations    = topN 10 (mapMaybe memoryLocation mems)
-  , statsMonthlyActivity = activityBy (take 7 . memoryTimeFrom) mems
-  , statsDailyActivity   = activityBy (take 10 . memoryTimeFrom) mems
-  }
-  where
-    durations   = map (\m -> durMins (memoryTimeFrom m) (memoryTimeTo m)) mems
-    totalMins   = sum durations
-    safeLongest
-      | null mems = Nothing
-      | otherwise = Just $ fst $ maximumBy (comparing snd) (zip mems durations)
-
-parseDT :: String -> Maybe UTCTime
-parseDT s = parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M" s
-
-durMins :: String -> String -> Int
-durMins from to = fromMaybe 0 $ do
-  t1 <- parseDT from
-  t2 <- parseDT to
-  return $ max 0 $ round (diffUTCTime t2 t1 / 60)
-
-topN :: Int -> [String] -> [(String, Int)]
-topN n xs =
-  take n
-  $ sortBy (comparing (Down . snd))
-  $ map (\g -> (head g, length g))
-  $ group (sort xs)
-
-activityBy :: (Memory -> String) -> [Memory] -> [(String, Int)]
-activityBy f mems =
-  sortBy (comparing fst)
-  $ map (\g -> (head g, length g))
-  $ group (sort (map f mems))
-
-photosDir :: FilePath
-photosDir = "photos"
-
-uploadPhotos :: MultipartData Tmp -> Handler [String]
-uploadPhotos multipartData = liftIO $ do
-  createDirectoryIfMissing True photosDir
-  now <- getCurrentTime
-  let ts = formatTime defaultTimeLocale "%Y%m%d%H%M%S" now
-  zipWithM (saveFile ts) [1 :: Int ..] (files multipartData)
-  where
-    saveFile ts idx fd = do
-      let ext  = takeExtension (T.unpack (fdFileName fd))
-          name = ts ++ show idx ++ ext
-          dest = photosDir </> name
-      copyFile (fdPayload fd) dest
-      return name
-
--- COUPLE NOTES
-
-data CoupleNote = CoupleNote
-  { coupleNoteId        :: Maybe Int
-  , coupleNoteOwner     :: String
-  , coupleNoteTitle     :: String
-  , coupleNoteBody      :: String
-  , coupleNoteCreatedAt :: String
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON CoupleNote where parseJSON = genericParseJSON (aesonOpts "coupleNote")
-instance ToJSON CoupleNote where toJSON = genericToJSON (aesonOpts "coupleNote")
-
-data CoupleNoteInput = CoupleNoteInput
-  { coupleNoteInputOwner :: String
-  , coupleNoteInputTitle :: String
-  , coupleNoteInputBody  :: String
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON CoupleNoteInput where parseJSON = genericParseJSON (aesonOpts "coupleNoteInput")
-instance ToJSON CoupleNoteInput where toJSON = genericToJSON (aesonOpts "coupleNoteInput")
-
-toCoupleNote :: Entity CoupleNoteDb -> CoupleNote
-toCoupleNote (Entity key db) = CoupleNote
-  { coupleNoteId        = Just (fromIntegral (fromSqlKey key))
-  , coupleNoteOwner     = T.unpack (coupleNoteDbOwner db)
-  , coupleNoteTitle     = T.unpack (coupleNoteDbTitle db)
-  , coupleNoteBody      = T.unpack (coupleNoteDbBody db)
-  , coupleNoteCreatedAt = T.unpack (coupleNoteDbCreatedAt db)
-  }
-
-type NoteAPI =
-       "api" :> "notes" :> Get '[JSON] [CoupleNote]
-  :<|> "api" :> "notes" :> ReqBody '[JSON] CoupleNoteInput :> Post '[JSON] CoupleNote
-  :<|> "api" :> "notes" :> Capture "id" Int :> ReqBody '[JSON] CoupleNoteInput :> Put '[JSON] CoupleNote
-  :<|> "api" :> "notes" :> Capture "id" Int :> Delete '[JSON] NoContent
+-- NOTE HANDLERS
 
 noteServer :: ServerT NoteAPI AppM
 noteServer = getNotes :<|> createNote :<|> updateNote :<|> deleteNote
@@ -653,43 +328,7 @@ deleteNote noteId = do
     Nothing -> throwError err404
     Just _  -> runDB (delete key) >> return NoContent
 
--- COUPLE PLANS
-
-data CouplePlan = CouplePlan
-  { couplePlanId       :: Maybe Int
-  , couplePlanCategory :: String
-  , couplePlanTitle    :: String
-  , couplePlanDetail   :: Maybe String
-  , couplePlanDone     :: Bool
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON CouplePlan where parseJSON = genericParseJSON (aesonOpts "couplePlan")
-instance ToJSON CouplePlan where toJSON = genericToJSON (aesonOpts "couplePlan")
-
-data CouplePlanInput = CouplePlanInput
-  { couplePlanInputCategory :: String
-  , couplePlanInputTitle    :: String
-  , couplePlanInputDetail   :: Maybe String
-  , couplePlanInputDone     :: Bool
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON CouplePlanInput where parseJSON = genericParseJSON (aesonOpts "couplePlanInput")
-instance ToJSON CouplePlanInput where toJSON = genericToJSON (aesonOpts "couplePlanInput")
-
-toCouplePlan :: Entity CouplePlanDb -> CouplePlan
-toCouplePlan (Entity key db) = CouplePlan
-  { couplePlanId       = Just (fromIntegral (fromSqlKey key))
-  , couplePlanCategory = T.unpack (couplePlanDbCategory db)
-  , couplePlanTitle    = T.unpack (couplePlanDbTitle db)
-  , couplePlanDetail   = T.unpack <$> couplePlanDbDetail db
-  , couplePlanDone     = couplePlanDbDone db
-  }
-
-type PlanAPI =
-       "api" :> "plans" :> Get '[JSON] [CouplePlan]
-  :<|> "api" :> "plans" :> ReqBody '[JSON] CouplePlanInput :> Post '[JSON] CouplePlan
-  :<|> "api" :> "plans" :> Capture "id" Int :> ReqBody '[JSON] CouplePlanInput :> Put '[JSON] CouplePlan
-  :<|> "api" :> "plans" :> Capture "id" Int :> Delete '[JSON] NoContent
+-- PLAN HANDLERS
 
 planServer :: ServerT PlanAPI AppM
 planServer = getPlans :<|> createPlan :<|> updatePlan :<|> deletePlan
@@ -732,43 +371,7 @@ deletePlan planId = do
     Nothing -> throwError err404
     Just _  -> runDB (delete key) >> return NoContent
 
--- DIARY ENTRIES
-
-data DiaryEntry = DiaryEntry
-  { diaryEntryId      :: Maybe Int
-  , diaryEntryDate    :: String
-  , diaryEntryMood    :: Maybe String
-  , diaryEntryBody    :: String
-  , diaryEntryWeather :: Maybe String
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON DiaryEntry where parseJSON = genericParseJSON (aesonOpts "diaryEntry")
-instance ToJSON DiaryEntry where toJSON = genericToJSON (aesonOpts "diaryEntry")
-
-data DiaryEntryInput = DiaryEntryInput
-  { diaryEntryInputDate    :: String
-  , diaryEntryInputMood    :: Maybe String
-  , diaryEntryInputBody    :: String
-  , diaryEntryInputWeather :: Maybe String
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON DiaryEntryInput where parseJSON = genericParseJSON (aesonOpts "diaryEntryInput")
-instance ToJSON DiaryEntryInput where toJSON = genericToJSON (aesonOpts "diaryEntryInput")
-
-toDiaryEntry :: Entity DiaryEntryDb -> DiaryEntry
-toDiaryEntry (Entity key db) = DiaryEntry
-  { diaryEntryId      = Just (fromIntegral (fromSqlKey key))
-  , diaryEntryDate    = T.unpack (diaryEntryDbDate db)
-  , diaryEntryMood    = T.unpack <$> diaryEntryDbMood db
-  , diaryEntryBody    = T.unpack (diaryEntryDbBody db)
-  , diaryEntryWeather = T.unpack <$> diaryEntryDbWeather db
-  }
-
-type DiaryAPI =
-       "api" :> "diary" :> Get '[JSON] [DiaryEntry]
-  :<|> "api" :> "diary" :> ReqBody '[JSON] DiaryEntryInput :> Post '[JSON] DiaryEntry
-  :<|> "api" :> "diary" :> Capture "id" Int :> ReqBody '[JSON] DiaryEntryInput :> Put '[JSON] DiaryEntry
-  :<|> "api" :> "diary" :> Capture "id" Int :> Delete '[JSON] NoContent
+-- DIARY HANDLERS
 
 diaryServer :: ServerT DiaryAPI AppM
 diaryServer = getDiaryEntries :<|> createDiaryEntry :<|> updateDiaryEntry :<|> deleteDiaryEntry
@@ -811,26 +414,14 @@ deleteDiaryEntry entryId = do
     Nothing -> throwError err404
     Just _  -> runDB (delete key) >> return NoContent
 
--- GEOCODING
+-- STATS HANDLER
 
-data GeoResult = GeoResult
-  { geoDisplayName :: String
-  , geoLat         :: String
-  , geoLon         :: String
-  } deriving (Show, Generic)
+getStats :: AppM Stats
+getStats = do
+  entities <- runDB $ selectList [] []
+  return $ computeStats (map toMemory entities)
 
-instance ToJSON GeoResult where
-  toJSON gr = object
-    [ "displayName" .= geoDisplayName gr
-    , "lat"         .= geoLat gr
-    , "lon"         .= geoLon gr
-    ]
-
-instance FromJSON GeoResult where
-  parseJSON = withObject "GeoResult" $ \o ->
-    GeoResult <$> o .: "display_name" <*> o .: "lat" <*> o .: "lon"
-
-type GeoAPI = "api" :> "geocode" :> QueryParam "q" Text :> Get '[JSON] [GeoResult]
+-- GEOCODING HANDLER
 
 geocode :: Maybe Text -> AppM [GeoResult]
 geocode Nothing  = return []
@@ -848,6 +439,27 @@ geocode (Just q) = liftIO $ do
     encodeChar ',' = "%2C"
     encodeChar '&' = "%26"
     encodeChar c   = [c]
+
+-- PHOTO HANDLER
+
+photosDir :: FilePath
+photosDir = "photos"
+
+uploadPhotos :: MultipartData Tmp -> Handler [String]
+uploadPhotos multipartData = liftIO $ do
+  createDirectoryIfMissing True photosDir
+  now <- getCurrentTime
+  let ts = formatTime defaultTimeLocale "%Y%m%d%H%M%S" now
+  zipWithM (saveFile ts) [1 :: Int ..] (files multipartData)
+  where
+    saveFile ts idx fd = do
+      let ext  = takeExtension (T.unpack (fdFileName fd))
+          name = ts ++ show idx ++ ext
+          dest = photosDir </> name
+      copyFile (fdPayload fd) dest
+      return name
+
+-- APPLICATION
 
 app :: ConnectionPool -> Application
 app pool =
