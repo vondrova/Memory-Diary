@@ -1,0 +1,80 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: sans-serif;
+    background: #f5f5f5;
+    color: #333;
+}
+
+.header {
+    background: #2c3e50;
+    color: white;
+    padding: 1rem 2rem;
+}
+
+.main {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.memory-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.memory-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.memory-title {
+    font-size: 1.2rem;
+    margin-bottom: 0.4rem;
+}
+
+.memory-time {
+    color: #666;
+    font-size: 0.875rem;
+    margin-bottom: 0.4rem;
+}
+
+.memory-location {
+    color: #555;
+    font-size: 0.875rem;
+    margin-bottom: 0.4rem;
+}
+
+.memory-desc {
+    margin-top: 0.5rem;
+    line-height: 1.5;
+}
+
+.memory-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+}
+
+.tag {
+    background: #e8f4fd;
+    color: #2980b9;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+.error {
+    color: #c0392b;
+    padding: 1rem;
+    background: #fdecea;
+    border-radius: 6px;
+}
