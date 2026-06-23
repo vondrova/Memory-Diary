@@ -218,6 +218,17 @@ type alias GeoSuggestion =
     }
 
 
+type alias Stats =
+    { totalMinutes : Int
+    , memoryCount : Int
+    , photoCount : Int
+    , visitedPlaces : Int
+    , averageMinutes : Int
+    , topTags : List ( String, Int )
+    , topLocations : List ( String, Int )
+    }
+
+
 -- MODEL
 
 type alias Model =
@@ -255,6 +266,7 @@ type alias Model =
     , newDiaryDate : String
     , newDiaryBody : String
     , newDiaryMood : String
+    , stats : Maybe Stats
     }
 
 
@@ -312,6 +324,7 @@ type Msg
     | SetDiaryMood String
     | SubmitDiaryEntry
     | DiaryCreated (Result Http.Error DiaryEntry)
+    | GotStats (Result Http.Error Stats)
 
 
 -- ROUTING
@@ -373,8 +386,9 @@ init _ url key =
       , newDiaryDate = ""
       , newDiaryBody = ""
       , newDiaryMood = "😊"
+      , stats = Nothing
       }
-    , Cmd.batch [ fetchMemories, fetchImportantDays, fetchNotes, fetchPlans, fetchDiary ]
+    , Cmd.batch [ fetchMemories, fetchImportantDays, fetchNotes, fetchPlans, fetchDiary, fetchStats ]
     )
 
 
@@ -579,6 +593,12 @@ update msg model =
         DiaryCreated (Err _) ->
             ( { model | error = Just "Nepodařilo se uložit zápis." }, Cmd.none )
 
+        GotStats (Ok s) ->
+            ( { model | stats = Just s }, Cmd.none )
+
+        GotStats (Err _) ->
+            ( model, Cmd.none )
+
 
 -- HTTP
 
@@ -602,6 +622,10 @@ fetchDiary : Cmd Msg
 fetchDiary =
     Http.get { url = "/api/diary", expect = Http.expectJson GotDiary (D.list diaryDecoder) }
 
+fetchStats : Cmd Msg
+fetchStats =
+    Http.get { url = "/api/stats", expect = Http.expectJson GotStats statsDecoder }
+
 searchGeo : String -> Cmd Msg
 searchGeo q =
     Http.get { url = "/api/geocode?q=" ++ q, expect = Http.expectJson GotGeoSuggestions (D.list geoDecoder) }
@@ -613,19 +637,19 @@ createMemory model =
 createImportantDay : Model -> Cmd Msg
 createImportantDay model =
     Http.post { url = "/api/important-days"
-              , body = Http.jsonBody (E.object [ ( "importantDayInputTitle", E.string model.newDayTitle ), ( "importantDayInputDate", E.string model.newDayDate ), ( "importantDayInputNote", E.null ), ( "importantDayInputKind", E.string model.newDayKind ) ])
+              , body = Http.jsonBody (E.object [ ( "title", E.string model.newDayTitle ), ( "date", E.string model.newDayDate ), ( "note", E.null ), ( "kind", E.string model.newDayKind ) ])
               , expect = Http.expectJson DayCreated importantDayDecoder }
 
 createNote : Model -> Cmd Msg
 createNote model =
     Http.post { url = "/api/notes"
-              , body = Http.jsonBody (E.object [ ( "coupleNoteInputOwner", E.string model.newNoteOwner ), ( "coupleNoteInputTitle", E.string model.newNoteTitle ), ( "coupleNoteInputBody", E.string model.newNoteBody ) ])
+              , body = Http.jsonBody (E.object [ ( "owner", E.string model.newNoteOwner ), ( "title", E.string model.newNoteTitle ), ( "body", E.string model.newNoteBody ) ])
               , expect = Http.expectJson NoteCreated coupleNoteDecoder }
 
 createPlan : Model -> Cmd Msg
 createPlan model =
     Http.post { url = "/api/plans"
-              , body = Http.jsonBody (E.object [ ( "couplePlanInputCategory", E.string model.newPlanCategory ), ( "couplePlanInputTitle", E.string model.newPlanTitle ), ( "couplePlanInputDetail", if String.isEmpty model.newPlanDetail then E.null else E.string model.newPlanDetail ), ( "couplePlanInputDone", E.bool False ) ])
+              , body = Http.jsonBody (E.object [ ( "category", E.string model.newPlanCategory ), ( "title", E.string model.newPlanTitle ), ( "detail", if String.isEmpty model.newPlanDetail then E.null else E.string model.newPlanDetail ), ( "done", E.bool False ) ])
               , expect = Http.expectJson PlanCreated couplePlanDecoder }
 
 updatePlan : CouplePlan -> Cmd Msg
@@ -634,14 +658,14 @@ updatePlan plan =
         Nothing -> Cmd.none
         Just planId ->
             Http.request { method = "PUT", headers = [], url = "/api/plans/" ++ String.fromInt planId
-                         , body = Http.jsonBody (E.object [ ( "couplePlanInputCategory", E.string plan.category ), ( "couplePlanInputTitle", E.string plan.title ), ( "couplePlanInputDetail", Maybe.withDefault E.null (Maybe.map E.string plan.detail) ), ( "couplePlanInputDone", E.bool plan.done ) ])
+                         , body = Http.jsonBody (E.object [ ( "category", E.string plan.category ), ( "title", E.string plan.title ), ( "detail", Maybe.withDefault E.null (Maybe.map E.string plan.detail) ), ( "done", E.bool plan.done ) ])
                          , expect = Http.expectJson PlanUpdated couplePlanDecoder
                          , timeout = Nothing, tracker = Nothing }
 
 createDiaryEntry : Model -> Cmd Msg
 createDiaryEntry model =
     Http.post { url = "/api/diary"
-              , body = Http.jsonBody (E.object [ ( "diaryEntryInputDate", E.string model.newDiaryDate ), ( "diaryEntryInputMood", E.string model.newDiaryMood ), ( "diaryEntryInputBody", E.string model.newDiaryBody ), ( "diaryEntryInputWeather", E.null ) ])
+              , body = Http.jsonBody (E.object [ ( "date", E.string model.newDiaryDate ), ( "mood", E.string model.newDiaryMood ), ( "body", E.string model.newDiaryBody ), ( "weather", E.null ) ])
               , expect = Http.expectJson DiaryCreated diaryDecoder }
 
 encodeMemoryInput : Model -> E.Value
@@ -669,23 +693,40 @@ memoryDecoder =
 
 importantDayDecoder : D.Decoder ImportantDay
 importantDayDecoder =
-    D.map5 ImportantDay (D.maybe (D.field "importantDayId" D.int)) (D.field "importantDayTitle" D.string) (D.field "importantDayDate" D.string) (D.maybe (D.field "importantDayNote" D.string)) (D.field "importantDayKind" D.string)
+    D.map5 ImportantDay (D.maybe (D.field "id" D.int)) (D.field "title" D.string) (D.field "date" D.string) (D.maybe (D.field "note" D.string)) (D.field "kind" D.string)
 
 coupleNoteDecoder : D.Decoder CoupleNote
 coupleNoteDecoder =
-    D.map5 CoupleNote (D.maybe (D.field "coupleNoteId" D.int)) (D.field "coupleNoteOwner" D.string) (D.field "coupleNoteTitle" D.string) (D.field "coupleNoteBody" D.string) (D.field "coupleNoteCreatedAt" D.string)
+    D.map5 CoupleNote (D.maybe (D.field "id" D.int)) (D.field "owner" D.string) (D.field "title" D.string) (D.field "body" D.string) (D.field "createdAt" D.string)
 
 couplePlanDecoder : D.Decoder CouplePlan
 couplePlanDecoder =
-    D.map5 CouplePlan (D.maybe (D.field "couplePlanId" D.int)) (D.field "couplePlanCategory" D.string) (D.field "couplePlanTitle" D.string) (D.maybe (D.field "couplePlanDetail" D.string)) (D.field "couplePlanDone" D.bool)
+    D.map5 CouplePlan (D.maybe (D.field "id" D.int)) (D.field "category" D.string) (D.field "title" D.string) (D.maybe (D.field "detail" D.string)) (D.field "done" D.bool)
 
 diaryDecoder : D.Decoder DiaryEntry
 diaryDecoder =
-    D.map5 DiaryEntry (D.maybe (D.field "diaryEntryId" D.int)) (D.field "diaryEntryDate" D.string) (D.maybe (D.field "diaryEntryMood" D.string)) (D.field "diaryEntryBody" D.string) (D.maybe (D.field "diaryEntryWeather" D.string))
+    D.map5 DiaryEntry (D.maybe (D.field "id" D.int)) (D.field "date" D.string) (D.maybe (D.field "mood" D.string)) (D.field "body" D.string) (D.maybe (D.field "weather" D.string))
 
 geoDecoder : D.Decoder GeoSuggestion
 geoDecoder =
     D.map3 GeoSuggestion (D.field "displayName" D.string) (D.field "lat" D.string) (D.field "lon" D.string)
+
+statsDecoder : D.Decoder Stats
+statsDecoder =
+    D.map7 Stats
+        (D.field "totalMinutes" D.int)
+        (D.field "memoryCount" D.int)
+        (D.field "photoCount" D.int)
+        (D.field "visitedPlaces" D.int)
+        (D.field "averageMinutes" D.int)
+        (D.field "topTags" (D.list tagPairDecoder))
+        (D.field "topLocations" (D.list tagPairDecoder))
+
+tagPairDecoder : D.Decoder ( String, Int )
+tagPairDecoder =
+    D.map2 Tuple.pair
+        (D.index 0 D.string)
+        (D.index 1 D.int)
 
 
 -- CLIENT-SIDE BUSINESS LOGIC
@@ -1020,23 +1061,28 @@ viewTrash model =
 
 viewStats : Model -> Html Msg
 viewStats model =
-    let
-        t       = tr model.lang
-        stats   = computeStats model.memories
-        topTags = List.take 5 (countTags model.memories)
+    let t = tr model.lang
     in
-    div [ class "stats-page" ]
-        [ h2 [] [ text (t "statistics") ]
-        , div [ class "stats-grid" ]
-            [ statCard (t "memory_count") (String.fromInt stats.count)
-            , statCard (t "total_minutes") (String.fromInt stats.total)
-            , statCard (t "avg_minutes") (String.fromInt stats.avgMins)
-            , statCard (t "visited_places") (String.fromInt stats.places)
-            ]
-        , h3 [] [ text (t "top_tags") ]
-        , ul [ class "tag-list" ]
-            (List.map (\( tag, count ) -> li [] [ span [ class "tag" ] [ text tag ], text (" × " ++ String.fromInt count) ]) topTags)
-        ]
+    case model.stats of
+        Nothing ->
+            p [ class "empty-state" ] [ text "Načítám statistiky…" ]
+
+        Just s ->
+            div [ class "stats-page" ]
+                [ h2 [] [ text (t "statistics") ]
+                , div [ class "stats-grid" ]
+                    [ statCard (t "memory_count") (String.fromInt s.memoryCount)
+                    , statCard (t "total_minutes") (String.fromInt s.totalMinutes)
+                    , statCard (t "avg_minutes") (String.fromInt s.averageMinutes)
+                    , statCard (t "visited_places") (String.fromInt s.visitedPlaces)
+                    ]
+                , h3 [] [ text (t "top_tags") ]
+                , ul [ class "tag-list" ]
+                    (List.map
+                        (\( tag, count ) ->
+                            li [] [ span [ class "tag" ] [ text tag ], text (" × " ++ String.fromInt count) ])
+                        (List.take 5 s.topTags))
+                ]
 
 statCard : String -> String -> Html Msg
 statCard label_ value_ =

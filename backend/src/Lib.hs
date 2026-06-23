@@ -21,10 +21,12 @@ import Control.Monad (zipWithM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Logger (runNoLoggingT)
 import Control.Monad.Reader (ReaderT, ask, runReaderT)
-import Data.Aeson (FromJSON, ToJSON, decode, object, withObject, (.=), (.:))
+import Data.Aeson (FromJSON (..), ToJSON (..), Options, defaultOptions, decode, genericToJSON, genericParseJSON, object, withObject, (.=), (.:))
+import Data.Aeson (fieldLabelModifier)
 import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString.Lazy as LBS
-import Data.List (group, maximumBy, nub, sort, sortBy)
+import Data.Char (toLower)
+import Data.List (group, isPrefixOf, maximumBy, nub, sort, sortBy, stripPrefix)
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Ord (Down (..), comparing)
 import Data.Text (Text)
@@ -104,8 +106,8 @@ data Memory = Memory
   , memoryPhotos      :: [String]
   } deriving (Eq, Show, Generic)
 
-instance FromJSON Memory
-instance ToJSON Memory
+instance FromJSON Memory where parseJSON = genericParseJSON (aesonOpts "memory")
+instance ToJSON Memory where toJSON = genericToJSON (aesonOpts "memory")
 
 data MemoryInput = MemoryInput
   { inputTitle       :: String
@@ -117,8 +119,8 @@ data MemoryInput = MemoryInput
   , inputPhotos      :: [String]
   } deriving (Eq, Show, Generic)
 
-instance FromJSON MemoryInput
-instance ToJSON MemoryInput
+instance FromJSON MemoryInput where parseJSON = genericParseJSON (aesonOpts "input")
+instance ToJSON MemoryInput where toJSON = genericToJSON (aesonOpts "input")
 
 toMemory :: Entity MemoryDb -> Memory
 toMemory (Entity key db) = Memory
@@ -144,6 +146,13 @@ type AppM = ReaderT ConnectionPool Handler
 
 runDB :: ReaderT SqlBackend IO a -> AppM a
 runDB action = ask >>= liftIO . runSqlPool action
+
+aesonOpts :: String -> Options
+aesonOpts prefix = defaultOptions
+  { fieldLabelModifier = \s -> case stripPrefix prefix s of
+      Just (c : cs) -> toLower c : cs
+      _             -> s
+  }
 
 type MemoryAPI =
        "api" :> "memories"
@@ -261,8 +270,8 @@ data ImportantDay = ImportantDay
   , importantDayDay            :: Int
   } deriving (Eq, Show, Generic)
 
-instance FromJSON ImportantDay
-instance ToJSON ImportantDay
+instance FromJSON ImportantDay where parseJSON = genericParseJSON (aesonOpts "importantDay")
+instance ToJSON ImportantDay where toJSON = genericToJSON (aesonOpts "importantDay")
 
 data ImportantDayInput = ImportantDayInput
   { importantDayInputTitle :: String
@@ -271,8 +280,8 @@ data ImportantDayInput = ImportantDayInput
   , importantDayInputKind  :: String
   } deriving (Eq, Show, Generic)
 
-instance FromJSON ImportantDayInput
-instance ToJSON ImportantDayInput
+instance FromJSON ImportantDayInput where parseJSON = genericParseJSON (aesonOpts "importantDayInput")
+instance ToJSON ImportantDayInput where toJSON = genericToJSON (aesonOpts "importantDayInput")
 
 parseDay :: String -> Maybe Day
 parseDay = parseTimeM True defaultTimeLocale "%Y-%m-%d"
@@ -378,8 +387,8 @@ data Relationship = Relationship
   , relationshipDaysUntilAnniv  :: Int
   } deriving (Eq, Show, Generic)
 
-instance FromJSON Relationship
-instance ToJSON Relationship
+instance FromJSON Relationship where parseJSON = genericParseJSON (aesonOpts "relationship")
+instance ToJSON Relationship where toJSON = genericToJSON (aesonOpts "relationship")
 
 data RelationshipInput = RelationshipInput
   { relationshipInputPartner1  :: String
@@ -388,8 +397,8 @@ data RelationshipInput = RelationshipInput
   , relationshipInputNote      :: Maybe String
   } deriving (Eq, Show, Generic)
 
-instance FromJSON RelationshipInput
-instance ToJSON RelationshipInput
+instance FromJSON RelationshipInput where parseJSON = genericParseJSON (aesonOpts "relationshipInput")
+instance ToJSON RelationshipInput where toJSON = genericToJSON (aesonOpts "relationshipInput")
 
 toRelationship :: Day -> Entity RelationshipDb -> Relationship
 toRelationship today (Entity key db) =
@@ -449,8 +458,8 @@ data OnThisDay = OnThisDay
   , onThisDayYears         :: Maybe Int
   } deriving (Show, Generic)
 
-instance FromJSON OnThisDay
-instance ToJSON OnThisDay
+instance FromJSON OnThisDay where parseJSON = genericParseJSON (aesonOpts "onThisDay")
+instance ToJSON OnThisDay where toJSON = genericToJSON (aesonOpts "onThisDay")
 
 type OnThisDayAPI = "api" :> "on-this-day" :> Get '[JSON] OnThisDay
 
@@ -496,8 +505,8 @@ data Stats = Stats
   , statsDailyActivity   :: [(String, Int)]
   } deriving (Show, Generic)
 
-instance FromJSON Stats
-instance ToJSON Stats
+instance FromJSON Stats where parseJSON = genericParseJSON (aesonOpts "stats")
+instance ToJSON Stats where toJSON = genericToJSON (aesonOpts "stats")
 
 type StatsAPI = "api" :> "stats" :> Get '[JSON] Stats
 
@@ -576,8 +585,8 @@ data CoupleNote = CoupleNote
   , coupleNoteCreatedAt :: String
   } deriving (Eq, Show, Generic)
 
-instance FromJSON CoupleNote
-instance ToJSON CoupleNote
+instance FromJSON CoupleNote where parseJSON = genericParseJSON (aesonOpts "coupleNote")
+instance ToJSON CoupleNote where toJSON = genericToJSON (aesonOpts "coupleNote")
 
 data CoupleNoteInput = CoupleNoteInput
   { coupleNoteInputOwner :: String
@@ -585,8 +594,8 @@ data CoupleNoteInput = CoupleNoteInput
   , coupleNoteInputBody  :: String
   } deriving (Eq, Show, Generic)
 
-instance FromJSON CoupleNoteInput
-instance ToJSON CoupleNoteInput
+instance FromJSON CoupleNoteInput where parseJSON = genericParseJSON (aesonOpts "coupleNoteInput")
+instance ToJSON CoupleNoteInput where toJSON = genericToJSON (aesonOpts "coupleNoteInput")
 
 toCoupleNote :: Entity CoupleNoteDb -> CoupleNote
 toCoupleNote (Entity key db) = CoupleNote
@@ -654,8 +663,8 @@ data CouplePlan = CouplePlan
   , couplePlanDone     :: Bool
   } deriving (Eq, Show, Generic)
 
-instance FromJSON CouplePlan
-instance ToJSON CouplePlan
+instance FromJSON CouplePlan where parseJSON = genericParseJSON (aesonOpts "couplePlan")
+instance ToJSON CouplePlan where toJSON = genericToJSON (aesonOpts "couplePlan")
 
 data CouplePlanInput = CouplePlanInput
   { couplePlanInputCategory :: String
@@ -664,8 +673,8 @@ data CouplePlanInput = CouplePlanInput
   , couplePlanInputDone     :: Bool
   } deriving (Eq, Show, Generic)
 
-instance FromJSON CouplePlanInput
-instance ToJSON CouplePlanInput
+instance FromJSON CouplePlanInput where parseJSON = genericParseJSON (aesonOpts "couplePlanInput")
+instance ToJSON CouplePlanInput where toJSON = genericToJSON (aesonOpts "couplePlanInput")
 
 toCouplePlan :: Entity CouplePlanDb -> CouplePlan
 toCouplePlan (Entity key db) = CouplePlan
@@ -733,8 +742,8 @@ data DiaryEntry = DiaryEntry
   , diaryEntryWeather :: Maybe String
   } deriving (Eq, Show, Generic)
 
-instance FromJSON DiaryEntry
-instance ToJSON DiaryEntry
+instance FromJSON DiaryEntry where parseJSON = genericParseJSON (aesonOpts "diaryEntry")
+instance ToJSON DiaryEntry where toJSON = genericToJSON (aesonOpts "diaryEntry")
 
 data DiaryEntryInput = DiaryEntryInput
   { diaryEntryInputDate    :: String
@@ -743,8 +752,8 @@ data DiaryEntryInput = DiaryEntryInput
   , diaryEntryInputWeather :: Maybe String
   } deriving (Eq, Show, Generic)
 
-instance FromJSON DiaryEntryInput
-instance ToJSON DiaryEntryInput
+instance FromJSON DiaryEntryInput where parseJSON = genericParseJSON (aesonOpts "diaryEntryInput")
+instance ToJSON DiaryEntryInput where toJSON = genericToJSON (aesonOpts "diaryEntryInput")
 
 toDiaryEntry :: Entity DiaryEntryDb -> DiaryEntry
 toDiaryEntry (Entity key db) = DiaryEntry

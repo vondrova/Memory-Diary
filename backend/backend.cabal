@@ -39,6 +39,7 @@ library
     , bytestring
     , directory
     , filepath
+    , http-conduit
     , monad-logger
     , mtl
     , persistent
@@ -69,6 +70,7 @@ executable backend-exe
     , bytestring
     , directory
     , filepath
+    , http-conduit
     , monad-logger
     , mtl
     , persistent
@@ -99,6 +101,7 @@ test-suite backend-test
     , directory
     , filepath
     , hspec
+    , http-conduit
     , monad-logger
     , mtl
     , persistent
