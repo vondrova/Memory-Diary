@@ -1,0 +1,14 @@
+frontend/elm-stuff/
+frontend/.elm-home/
+frontend/node_modules/
+frontend/main.js
+main.js
+node_modules/
+backend/.stack-work/
+backend/*.db
+backend/*.sqlite
+.claude/
+.vscode/
+.idea/
+photos/*
+!photos/.gitkeep

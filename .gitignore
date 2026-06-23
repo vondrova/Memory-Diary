@@ -8,24 +8,14 @@ frontend/.elm-home/
 frontend/node_modules/
 
 # Haskell / Stack
-.stack-work/
 backend/.stack-work/
 backend/dist-newstyle/
 
 # Node
 node_modules/
 
-# Uploaded photos (managed at runtime)
-photos/*.jpg
-photos/*.jpeg
-photos/*.png
-photos/*.gif
-photos/*.webp
-
 # Database files (local dev only)
 *.db
-*.db-shm
-*.db-wal
 *.sqlite
 
 # OS
@@ -39,4 +29,3 @@ Thumbs.db
 .codex/
 .agents/
 *.swp
-*~

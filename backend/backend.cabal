@@ -6,9 +6,11 @@ cabal-version: 2.2
 
 name:           backend
 version:        0.1.0.0
-synopsis:       Haskell backend for Memory Diary
-homepage:       https://github.com/vondrve/Memory-Diary#readme
-bug-reports:    https://github.com/vondrve/Memory-Diary/issues
+synopsis:       Haskell backend for Memory Diary — a couple's shared diary app
+description:    Memory Diary is a personal web application for recording and rediscovering shared memories. This package contains the Servant/Persistent backend that exposes a JSON API consumed by an Elm single-page application.
+category:       Web
+homepage:       https://github.com/vondrve/Mem-Diary#readme
+bug-reports:    https://github.com/vondrve/Mem-Diary/issues
 author:         Veronika Vondrová
 maintainer:     vondrve@gmail.com
 copyright:      2026 Veronika Vondrová
@@ -21,7 +23,7 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/vondrve/Memory-Diary
+  location: https://github.com/vondrve/Mem-Diary
 
 library
   exposed-modules:
@@ -42,7 +44,6 @@ library
       Handler.Stats
       Handler.Tags
       Handler.Trash
-      Lib
       Models
       Types
   other-modules:
@@ -51,14 +52,16 @@ library
       Paths_backend
   hs-source-dirs:
       src
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , directory
     , filepath
     , http-conduit
+    , http-types
     , monad-logger
     , mtl
     , persistent
@@ -81,15 +84,17 @@ executable backend-exe
       Paths_backend
   hs-source-dirs:
       app
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , backend
     , base >=4.7 && <5
     , bytestring
+    , containers
     , directory
     , filepath
     , http-conduit
+    , http-types
     , monad-logger
     , mtl
     , persistent
@@ -108,19 +113,29 @@ test-suite backend-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      LibSpec
+      TestHelpers
+      Domain.AggregationSpec
+      Domain.FilterSpec
+      Domain.RecurrenceSpec
+      Domain.ValidationSpec
+      Handler.HelpersSpec
+      Handler.IntegrationSpec
+      Handler.PhotosSpec
+      TypesSpec
   hs-source-dirs:
       test
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , backend
     , base >=4.7 && <5
     , bytestring
+    , containers
     , directory
     , filepath
     , hspec
     , http-conduit
+    , http-types
     , monad-logger
     , mtl
     , persistent

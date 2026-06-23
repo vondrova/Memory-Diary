@@ -1,18 +1,25 @@
--- | HTTP handler for the /api/stats endpoint.
-module Handler.Stats
-  ( getStats
-  ) where
+{-# LANGUAGE OverloadedStrings #-}
 
-import Api (StatsAPI)
+-- | HTTP handler for the api stats endpoint, returning aggregate statistics about the stored memories
+module Handler.Stats
+  ( statsServer,
+  )
+where
+
+import qualified Api
+import Handler.Helpers (AppM, runDb)
 import Database.Persist (selectList)
 import Domain.Aggregation (computeStats)
-import Handler.Helpers (AppM, runDB)
-import Models (toMemory)
+import Handler.Memories (memoryRowFromEntity)
+import Models (Stats)
 import Servant (ServerT)
-import Types (Stats)
 
--- | Compute and return aggregate statistics over all stored memories.
-getStats :: ServerT StatsAPI AppM
+statsServer :: ServerT Api.StatsApi AppM
+statsServer = getStats
+
+-- | Compute and return aggregate statistics over all stored memories
+getStats :: AppM Stats
 getStats = do
-  entities <- runDB $ selectList [] []
-  return $ computeStats (map toMemory entities)
+  memories <- runDb (selectList [] [])
+  rows <- mapM memoryRowFromEntity memories
+  pure (computeStats rows)

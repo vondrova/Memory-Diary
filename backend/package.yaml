@@ -1,22 +1,31 @@
 name:                backend
 version:             0.1.0.0
-github:              "vondrve/Memory-Diary"
+github:              "vondrve/Mem-Diary"
 license:             BSD-3-Clause
 author:              "Veronika Vondrová"
 maintainer:          "vondrve@gmail.com"
 copyright:           "2026 Veronika Vondrová"
-synopsis:            "Haskell backend for Memory Diary"
+synopsis:            "Haskell backend for Memory Diary — a couple's shared diary app"
+category:            Web
 
 extra-source-files:
 - README.md
 - CHANGELOG.md
 
+description: >
+  Memory Diary is a personal web application for recording and rediscovering
+  shared memories. This package contains the Servant/Persistent backend that
+  exposes a JSON API consumed by an Elm single-page application.
+
 dependencies:
 - base >= 4.7 && < 5
 - aeson
 - bytestring
+- containers
 - directory
 - filepath
+- http-conduit
+- http-types
 - monad-logger
 - mtl
 - persistent
@@ -26,7 +35,6 @@ dependencies:
 - servant-server
 - text
 - time
-- http-conduit
 - wai
 - wai-app-static
 - warp
@@ -37,26 +45,13 @@ ghc-options:
 - -Widentities
 - -Wincomplete-record-updates
 - -Wincomplete-uni-patterns
+- -Wmissing-export-lists
 - -Wmissing-home-modules
 - -Wpartial-fields
 - -Wredundant-constraints
 
 library:
   source-dirs: src
-
-tests:
-  backend-test:
-    main: Spec.hs
-    source-dirs: test
-    other-modules:
-    - LibSpec
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - backend
-    - hspec
 
 executables:
   backend-exe:
@@ -68,3 +63,25 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - backend
+
+tests:
+  backend-test:
+    main:                Spec.hs
+    source-dirs:         test
+    other-modules:
+    - TestHelpers
+    - Domain.AggregationSpec
+    - Domain.FilterSpec
+    - Domain.RecurrenceSpec
+    - Domain.ValidationSpec
+    - Handler.HelpersSpec
+    - Handler.IntegrationSpec
+    - Handler.PhotosSpec
+    - TypesSpec
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - backend
+    - hspec

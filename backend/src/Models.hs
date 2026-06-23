@@ -1,7 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -11,154 +9,162 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
--- | Database schema (Persistent entities) and functions that convert
---   database rows into domain types defined in "Types".
---   Tags and photos are stored as comma-separated text in a single column;
---   'splitComma' / 'joinComma' handle the serialisation boundary.
+-- | Database schema for Memory Diary.
+--   All tables are defined using Persistent's Template Haskell DSL (`persistLowerCase`).
+--   'Stats' is not stored in the database, it is computed ad-hoc by aggregating memory data in 'Handler.Stats' / 'Domain.Aggregation' and returned via the API
 module Models
-  ( module Models
-  , module Database.Persist
-  , module Database.Persist.Postgresql
-  ) where
+  ( module Models,
+  )
+where
 
+import Data.Aeson (ToJSON (..), object, (.=))
 import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Time.Calendar (Day, diffDays)
-import Database.Persist
-import Database.Persist.Postgresql
+import Data.Time (UTCTime)
+import Database.Persist.Sql (SqlPersistT, rawExecute)
 import Database.Persist.TH
-import Domain.Recurrence (computeNextOccurrence, parseDay, formatDay)
-import Types
 
-share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
-MemoryDb
-  title       Text
-  timeFrom    Text
-  timeTo      Text
-  description Text Maybe
-  location    Text Maybe
-  tags        Text
-  photos      Text
-  deriving Show
+share
+  [mkPersist sqlSettings, mkMigrate "migrateAll"] -- generate Persistent entities and a migration function to synchronize the database schema
+  [persistLowerCase|
 
-ImportantDayDb
-  title Text
-  date  Text
-  note  Text Maybe
-  kind  Text
-  deriving Show
+-- Memory table
+MemoryDb json sql=memories
+    title       Text
+    timeFrom    UTCTime
+    timeTo      UTCTime
+    description Text Maybe
+    location    Text Maybe
+    deriving Show Eq
 
-RelationshipDb
-  partner1  Text
-  partner2  Text
-  startDate Text
-  note      Text Maybe
-  deriving Show
+-- Tags table (M:N with memories)
+MemoryTagDb json sql=memory_tags
+    memoryId    MemoryDbId
+    tag         Text
+    UniqueMemoryTag memoryId tag
+    deriving Show Eq
 
-CoupleNoteDb
-  owner     Text
-  title     Text
-  body      Text
-  createdAt Text
-  deriving Show
+-- Photos table (1:N with memories)
+MemoryPhotoDb json sql=memory_photos
+    memoryId    MemoryDbId
+    filename    Text
+    position    Int
+    deriving Show Eq
 
-CouplePlanDb
-  category Text
-  title    Text
-  detail   Text Maybe
-  done     Bool
-  deriving Show
+-- Catalog tables for tags and locations
+TagCatalogDb json sql=tag_catalog
+    name Text
+    UniqueTagCatalog name
+    deriving Show Eq
+LocationCatalogDb json sql=location_catalog
+    name Text
+    UniqueLocationCatalog name
+    deriving Show Eq
 
-DiaryEntryDb
-  date    Text
-  mood    Text Maybe
-  body    Text
-  weather Text Maybe
-  deriving Show
+-- Important days: birthdays and manually added anniversaries
+ImportantDayDb json sql=important_days
+    title       Text
+    date        UTCTime
+    note        Text Maybe
+    kind        Text
+    deriving Show Eq
+
+-- Relationship table for the couple's shared info 
+RelationshipDb json sql=relationship
+    key         Text
+    startDate   UTCTime Maybe
+    heartColor  Text
+    UniqueRelationshipKey key
+    deriving Show Eq
+
+-- Person-profile table for each partner
+PersonProfileDb json sql=person_profiles
+    side        Text
+    name        Text
+    displayMode Text
+    photo       Text Maybe
+    figureColor Text
+    accessory   Text
+    expression  Text
+    birthday    UTCTime Maybe
+    UniquePersonSide side
+    deriving Show Eq
+
+-- Couple notes created by either partner
+CoupleNoteDb json sql=couple_notes
+    owner       Text
+    title       Text
+    body        Text
+    UniqueNoteTitle owner title
+    deriving Show Eq
+
+-- Couple plans created by either partner
+CouplePlanDb json sql=couple_plans
+    category    Text
+    title       Text
+    detail      Text Maybe
+    done        Bool
+    deriving Show Eq
+
+-- Catalog table for plan categories
+PlanCategoryDb json sql=plan_categories
+    name Text
+    UniquePlanCategory name
+    deriving Show Eq
+
+-- Soft-deleted items from any table
+TrashItemDb json sql=trash_items
+    kind        Text
+    payload     Text
+    deletedAt   UTCTime
+    deriving Show Eq
+
+-- Personal diary entries
+DiaryEntryDb json sql=diary_entries
+    owner    Text       
+    date     UTCTime    
+    body     Text        
+    deriving Show Eq
 |]
 
--- | Split a comma-separated 'Text' column into a list of 'String' values.
---   Returns an empty list for empty text rather than a singleton @[""]@.
-splitComma :: Text -> [String]
-splitComma t
-  | T.null t  = []
-  | otherwise = map T.unpack (T.splitOn "," t)
+-- | Backfill the tag and location catalogs from existing memory data (no-op if already up to date)
+syncCatalogValues :: SqlPersistT IO ()
+syncCatalogValues = do
+  rawExecute "INSERT INTO tag_catalog (name) SELECT DISTINCT tag FROM memory_tags ON CONFLICT (name) DO NOTHING" []
+  rawExecute "INSERT INTO location_catalog (name) SELECT DISTINCT location FROM memories WHERE location IS NOT NULL ON CONFLICT (name) DO NOTHING" []
+  rawExecute "INSERT INTO plan_categories (name) SELECT DISTINCT category FROM couple_plans ON CONFLICT (name) DO NOTHING" []
+  rawExecute "INSERT INTO plan_categories (name) VALUES ('Bucket list'), ('Places to eat'), ('Movies to watch'), ('Trips') ON CONFLICT (name) DO NOTHING" []
 
--- | Join a list of strings into a comma-separated 'Text' column value.
-joinComma :: [String] -> Text
-joinComma = T.intercalate "," . map T.pack
-
--- | Convert a Persistent database row to the 'Memory' domain type.
-toMemory :: Entity MemoryDb -> Memory
-toMemory (Entity key db) = Memory
-  { memoryId          = fromIntegral (fromSqlKey key)
-  , memoryTitle       = T.unpack (memoryDbTitle db)
-  , memoryTimeFrom    = T.unpack (memoryDbTimeFrom db)
-  , memoryTimeTo      = T.unpack (memoryDbTimeTo db)
-  , memoryDescription = T.unpack <$> memoryDbDescription db
-  , memoryLocation    = T.unpack <$> memoryDbLocation db
-  , memoryTags        = splitComma (memoryDbTags db)
-  , memoryPhotos      = splitComma (memoryDbPhotos db)
+-- | Aggregate statistics returned by the stats endpoint
+data Stats = Stats
+  { statsTotalMinutes :: Int,
+    statsMemoryCount :: Int,
+    statsPhotoCount :: Int,
+    statsVisitedPlaces :: Int,
+    statsAverageMinutes :: Int,
+    statsLongestTitle :: Maybe Text,
+    statsLongestMinutes :: Int,
+    statsTopTags :: [(Text, Int)],
+    statsTopLocations :: [(Text, Int)],
+    statsMonthlyActivity :: [(Text, Int)],
+    statsDailyActivity :: [(Text, Int)] -- for heatmap
   }
+  deriving stock (Eq, Show)
 
-toImportantDay :: Day -> Entity ImportantDayDb -> ImportantDay
-toImportantDay today (Entity key db) =
-  let (nextOcc, days, month, day) = computeNextOccurrence today (T.unpack (importantDayDbDate db))
-  in ImportantDay
-    { importantDayId             = Just (fromIntegral (fromSqlKey key))
-    , importantDayTitle          = T.unpack (importantDayDbTitle db)
-    , importantDayDate           = T.unpack (importantDayDbDate db)
-    , importantDayNote           = T.unpack <$> importantDayDbNote db
-    , importantDayKind           = T.unpack (importantDayDbKind db)
-    , importantDayNextOccurrence = nextOcc
-    , importantDayDaysUntil      = days
-    , importantDayMonth          = month
-    , importantDayDay            = day
-    }
-
-toRelationship :: Day -> Entity RelationshipDb -> Relationship
-toRelationship today (Entity key db) =
-  let startStr = T.unpack (relationshipDbStartDate db)
-      daysTog  = maybe 0 (fromIntegral . diffDays today) (parseDay startStr)
-      yearsTog = daysTog `div` 365
-      (nextAnn, daysUntilAnn, _, _) = computeNextOccurrence today startStr
-  in Relationship
-    { relationshipId              = Just (fromIntegral (fromSqlKey key))
-    , relationshipPartner1        = T.unpack (relationshipDbPartner1 db)
-    , relationshipPartner2        = T.unpack (relationshipDbPartner2 db)
-    , relationshipStartDate       = startStr
-    , relationshipNote            = T.unpack <$> relationshipDbNote db
-    , relationshipDaysTogether    = daysTog
-    , relationshipYearsTogether   = yearsTog
-    , relationshipNextAnniversary = nextAnn
-    , relationshipDaysUntilAnniv  = daysUntilAnn
-    }
-
-toCoupleNote :: Entity CoupleNoteDb -> CoupleNote
-toCoupleNote (Entity key db) = CoupleNote
-  { coupleNoteId        = Just (fromIntegral (fromSqlKey key))
-  , coupleNoteOwner     = T.unpack (coupleNoteDbOwner db)
-  , coupleNoteTitle     = T.unpack (coupleNoteDbTitle db)
-  , coupleNoteBody      = T.unpack (coupleNoteDbBody db)
-  , coupleNoteCreatedAt = T.unpack (coupleNoteDbCreatedAt db)
-  }
-
-toCouplePlan :: Entity CouplePlanDb -> CouplePlan
-toCouplePlan (Entity key db) = CouplePlan
-  { couplePlanId       = Just (fromIntegral (fromSqlKey key))
-  , couplePlanCategory = T.unpack (couplePlanDbCategory db)
-  , couplePlanTitle    = T.unpack (couplePlanDbTitle db)
-  , couplePlanDetail   = T.unpack <$> couplePlanDbDetail db
-  , couplePlanDone     = couplePlanDbDone db
-  }
-
-toDiaryEntry :: Entity DiaryEntryDb -> DiaryEntry
-toDiaryEntry (Entity key db) = DiaryEntry
-  { diaryEntryId      = Just (fromIntegral (fromSqlKey key))
-  , diaryEntryDate    = T.unpack (diaryEntryDbDate db)
-  , diaryEntryMood    = T.unpack <$> diaryEntryDbMood db
-  , diaryEntryBody    = T.unpack (diaryEntryDbBody db)
-  , diaryEntryWeather = T.unpack <$> diaryEntryDbWeather db
-  }
+instance ToJSON Stats where
+  toJSON s =
+    object
+      [ "totalMinutes" .= statsTotalMinutes s,
+        "memoryCount" .= statsMemoryCount s,
+        "photoCount" .= statsPhotoCount s,
+        "visitedPlaces" .= statsVisitedPlaces s,
+        "averageMinutes" .= statsAverageMinutes s,
+        "longestTitle" .= statsLongestTitle s,
+        "longestMinutes" .= statsLongestMinutes s,
+        "topTags" .= statsTopTags s,
+        "topLocations" .= statsTopLocations s,
+        "monthlyActivity" .= statsMonthlyActivity s,
+        "dailyActivity" .= statsDailyActivity s
+      ]

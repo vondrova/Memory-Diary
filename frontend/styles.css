@@ -1,412 +1,3403 @@
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+        /* MEMORY DIARY STYLESHEET
+           Rules are ordered from shared foundations through page-specific components,
+           responsive adaptations, selectable colour themes, and the diary page. */
 
-/* Theme variables */
-.theme-light {
-    --bg: #f5f5f5;
-    --card: #ffffff;
-    --text: #333333;
-    --text-muted: #666666;
-    --border: #dddddd;
-    --header-bg: #2c3e50;
-    --header-text: #ffffff;
-    --tag-bg: #e8f4fd;
-    --tag-text: #2980b9;
-}
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-.theme-dark {
-    --bg: #1a1a2e;
-    --card: #16213e;
-    --text: #e0e0e0;
-    --text-muted: #aaaaaa;
-    --border: #333355;
-    --header-bg: #0f3460;
-    --header-text: #e0e0e0;
-    --tag-bg: #1a3a5c;
-    --tag-text: #74b9ff;
-}
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f5f5f5;
+            color: #222;
+        }
 
-body {
-    font-family: sans-serif;
-    background: var(--bg);
-    color: var(--text);
-}
+        .app { max-width: 760px; margin: 0 auto; padding: 1rem 1rem 3rem; }
 
-.header {
-    background: var(--header-bg);
-    color: var(--header-text);
-    padding: 1rem 2rem;
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-}
+        /* GLOBAL NAVIGATION
+           Lays out the primary page tabs shown at the top of every application view. */
+        .nav {
+            display: flex;
+            gap: 0.25rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0;
+        }
 
-.header-title {
-    font-size: 1.25rem;
-    white-space: nowrap;
-}
+        .nav-tab {
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            padding: 0.5rem 1rem;
+            font-size: 0.95rem;
+            cursor: pointer;
+            color: #555;
+            font-weight: 500;
+            transition: color 0.15s;
+        }
+        .nav-tab:hover { color: #222; }
+        .nav-tab.active {
+            color: #4f46e5;
+            border-bottom-color: #4f46e5;
+        }
 
-.nav {
-    display: flex;
-    gap: 0.25rem;
-}
+        /* SHARED BUTTONS
+           Defines the basic primary, secondary, icon, and destructive actions used across pages. */
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .btn-primary:hover { background: #4338ca; }
 
-.nav-link {
-    color: rgba(255, 255, 255, 0.75);
-    text-decoration: none;
-    padding: 0.4rem 0.8rem;
-    border-radius: 4px;
-    font-size: 0.9rem;
-}
+        .btn-ghost {
+            background: none;
+            border: 1px solid #d1d5db;
+            color: #555;
+            padding: 0.4rem 0.9rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .btn-ghost:hover { background: #f3f4f6; }
 
-.nav-link:hover {
-    color: white;
-    background: rgba(255, 255, 255, 0.1);
-}
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            color: #888;
+            line-height: 1;
+        }
+        .btn-icon:hover { background: #f3f4f6; color: #333; }
+        .btn-icon.btn-danger:hover { background: #fee2e2; color: #dc2626; }
 
-.nav-link--active {
-    color: white;
-    background: rgba(255, 255, 255, 0.15);
-}
+        /* SHARED SECTION HEADERS
+           Aligns page subsection titles with their contextual action buttons. */
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .timeline-header h2 { font-size: 1.3rem; }
 
-.page-actions {
-    margin-bottom: 1.25rem;
-}
+        /* TIMELINE: ON THIS DAY
+           Presents memories matching today's month and day above the main timeline. */
+        .on-this-day {
+            background: linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%);
+            border: 1px solid #c7d2fe;
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        .on-this-day h3 {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #4f46e5;
+            margin-bottom: 0.6rem;
+        }
+        .otd-cards { display: flex; flex-direction: column; gap: 0.35rem; }
+        .otd-card {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.9rem;
+        }
+        .otd-main {
+            flex: 1;
+            min-width: 0;
+        }
+        .otd-actions {
+            margin-left: auto;
+        }
+        .otd-year {
+            font-weight: 700;
+            color: #4f46e5;
+            min-width: 3rem;
+        }
+        .otd-loc { color: #888; font-size: 0.85rem; }
 
-.timeline {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    border-left: 2px solid #ddd;
-    padding-left: 1.5rem;
-    margin-left: 0.5rem;
-}
+        /* TIMELINE: MEMORY FILTERS
+           Arranges search, tag, location, and date-range controls for backend filtering. */
+        .filter-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            align-items: center;
+        }
+        .filter-input {
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.9rem;
+            flex: 1 1 160px;
+            min-width: 0;
+        }
+        .filter-input.filter-short { flex: 0 1 120px; }
 
-.timeline-item {
-    position: relative;
-    padding: 0.5rem 0 0.75rem;
-}
+        .filter-date-field {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex: 0 1 170px;
+            color: #6b7280;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
 
-.timeline-dot {
-    position: absolute;
-    left: -1.75rem;
-    top: 0.65rem;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #2980b9;
-    border: 2px solid white;
-    box-shadow: 0 0 0 2px #2980b9;
-}
+        .filter-date-field .filter-input {
+            flex: 1 1 auto;
+        }
 
-.timeline-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-}
+        /* SHARED DATA FORMS
+           Provides the base card, field, label, and row layout for create and edit forms. */
+        .form-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.25rem;
+        }
+        .form-header h2 { font-size: 1.1rem; }
 
-.timeline-date {
-    font-size: 0.8rem;
-    color: #888;
-}
+        .form-card input,
+        .form-card textarea,
+        .form-card select {
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 0.45rem 0.75rem;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+        .form-card textarea { min-height: 80px; resize: vertical; }
+        .form-card label { font-size: 0.8rem; font-weight: 600; color: #555; }
 
-.timeline-location {
-    color: #666;
-    font-size: 0.875rem;
-}
+        .form-row { display: flex; gap: 1rem; }
+        .form-group { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
 
-.not-found {
-    text-align: center;
-    padding: 3rem;
-    color: #666;
-}
+        /* MEMORY TAG CONTROLS
+           Styles tag entry, selected tag chips, and their remove actions in memory forms. */
+        .tag-input-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            align-items: center;
+        }
+        .tag-text-input {
+            flex: 1 1 120px;
+            min-width: 0;
+            border: 1px solid #d1d5db !important;
+            border-radius: 6px;
+            padding: 0.35rem 0.6rem !important;
+            font-size: 0.85rem;
+            width: auto !important;
+        }
+        .tag-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+        .tag-chip {
+            background: #ede9fe;
+            color: #4f46e5;
+            border-radius: 99px;
+            padding: 0.15rem 0.6rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .tag-remove {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #7c3aed;
+            font-size: 0.9rem;
+            line-height: 1;
+            padding: 0 0.1rem;
+        }
+        .tag-remove:hover { color: #dc2626; }
 
-.search-input {
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    width: 260px;
-    font-family: inherit;
-}
+        /* TIMELINE: MEMORY LIST
+           Defines the chronological list and reusable memory cards shown in multiple views. */
+        .timeline { display: flex; flex-direction: column; gap: 0.9rem; }
 
-.page-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1.25rem;
-}
+        .memory-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            border-left: 4px solid #4f46e5;
+        }
+        .memory-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.3rem;
+        }
+        .memory-time {
+            font-size: 0.78rem;
+            color: #888;
+            font-variant-numeric: tabular-nums;
+        }
+        .memory-actions { display: flex; gap: 0.2rem; }
+        .memory-card h3 { font-size: 1rem; margin-bottom: 0.3rem; }
+        .memory-location { font-size: 0.85rem; color: #555; margin-bottom: 0.25rem; }
+        .memory-desc { font-size: 0.9rem; color: #444; margin-bottom: 0.35rem; }
 
-.empty-state {
-    color: #999;
-    text-align: center;
-    padding: 2rem;
-}
+        /* IMPORTANT-DAY CARDS
+           Distinguishes recurring dates and their countdowns from ordinary memory cards. */
+        .ann-card { border-left-color: #ec4899; }
+        .ann-countdown {
+            font-size: 0.85rem;
+            color: #ec4899;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
 
-.stats-page h2,
-.stats-page h3 {
-    margin-bottom: 1rem;
-}
+        /* CALENDAR PAGE
+           Builds the monthly grid, event labels, day states, and selected-day indicators. */
+        .cal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-align: center;
+            margin-bottom: 0.75rem;
+        }
 
-.stats-page h3 {
-    margin-top: 1.5rem;
-}
+        .cal-header > div {
+            flex: 1;
+        }
 
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
+        .cal-header .btn-ghost {
+            flex: 0 0 auto;
+        }
+        .cal-header h2 { font-size: 1.2rem; }
 
-.stat-card {
-    background: white;
-    border-radius: 8px;
-    padding: 1.25rem;
-    text-align: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+            margin-bottom: 1.25rem;
+        }
+        .cal-dow {
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #888;
+            padding: 0.25rem 0;
+            text-transform: uppercase;
+        }
+        .cal-cell {
+            position: relative;
+            background: white;
+            border-radius: 6px;
+            min-height: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.1s, background 0.1s;
+        }
+        .cal-cell:hover { background: #f5f3ff; }
+        .cal-cell.empty { background: none; cursor: default; }
+        .cal-cell.empty:hover { background: none; }
+        .cal-cell.has-mems { font-weight: 600; }
+        .cal-cell.has-days {
+            border-color: rgba(190, 53, 94, 0.28);
+        }
+        .cal-cell.today { color: #4f46e5; font-weight: 700; }
+        .cal-cell.selected { border-color: #4f46e5; background: #eef2ff; }
+        .cal-day-number {
+            line-height: 1;
+        }
+        .cal-day-labels {
+            width: 100%;
+            display: grid;
+            gap: 0.18rem;
+            margin-top: 0.35rem;
+        }
+        .cal-day-label {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border-radius: 999px;
+            padding: 0.08rem 0.35rem;
+            font-size: 0.68rem;
+            font-weight: 800;
+            line-height: 1.35;
+        }
+        .cal-day-label.important {
+            color: var(--rose);
+            background: rgba(190, 53, 94, 0.1);
+        }
+        .cal-day-label.memory {
+            color: var(--green);
+            background: rgba(82, 127, 92, 0.12);
+        }
+        .cal-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #4f46e5;
+            position: absolute;
+            bottom: 5px;
+        }
 
-.stat-value {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #2980b9;
-}
+        /* STATISTICS PAGE: BASE CARDS
+           Provides the initial metric-card and large-value styles for backend aggregates. */
+        .stats-page { display: flex; flex-direction: column; gap: 1rem; }
+        .stats-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .stats-card h3 { font-size: 1rem; margin-bottom: 0.75rem; color: #333; }
+        .stats-big {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4f46e5;
+        }
 
-.stat-label {
-    font-size: 0.8rem;
-    color: #666;
-    margin-top: 0.25rem;
-}
+        .bar-chart { display: flex; flex-direction: column; gap: 0.5rem; }
+        .bar-row { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; }
+        .bar-label { width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #444; flex-shrink: 0; }
+        .bar-track { flex: 1; height: 10px; background: #e5e7eb; border-radius: 99px; overflow: hidden; }
+        .bar-fill { height: 100%; background: #4f46e5; border-radius: 99px; transition: width 0.3s; }
+        .bar-count { width: 2.5rem; text-align: right; color: #888; flex-shrink: 0; }
 
-.tag-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-}
+        /* HEATMAP */
+        .heatmap-outer { overflow-x: auto; padding-bottom: 0.25rem; }
+        .heatmap-grid { display: flex; gap: 3px; align-items: flex-start; }
+        .heatmap-col { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+        .heat-month { font-size: 9px; color: #999; height: 14px; line-height: 14px; white-space: nowrap; user-select: none; }
+        .heat-cell { width: 11px; height: 11px; border-radius: 2px; }
+        .heat-0 { background: #e8e8e8; }
+        .heat-1 { background: #f4b8c8; }
+        .heat-2 { background: #e8809e; }
+        .heat-3 { background: #d44e74; }
+        .heat-4 { background: #b02050; }
+        .heat-future { background: transparent; }
 
-.tag-list li {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
+        /* MEMORY PHOTOS
+           Handles upload previews, stored-photo strips, thumbnails, and remove controls. */
+        .photo-input-row { display: flex; align-items: center; gap: 0.5rem; }
 
-.geo-row {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
+        .photo-preview-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+        .photo-preview-item {
+            position: relative;
+            display: inline-flex;
+        }
+        .photo-thumb {
+            width: 72px;
+            height: 72px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+        .photo-preview-item .btn-icon {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(255,255,255,0.85);
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
 
-.geo-row input {
-    flex: 1;
-}
+        .photo-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+        .memory-photo {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            transition: opacity 0.15s;
+        }
+        .memory-photo:hover { opacity: 0.85; }
 
-.geo-input {
-    flex: 1;
-}
+        /* SHARED LOADING AND ERROR STATES
+           Displays empty, loading, validation, and failed-request messages consistently. */
+        .state-msg { color: #888; text-align: center; margin-top: 2rem; font-size: 0.95rem; }
+        .state-msg.error { color: #dc2626; }
 
-.geo-suggestions {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background: white;
-    max-height: 180px;
-    overflow-y: auto;
-}
 
-.geo-suggestion {
-    padding: 0.5rem 0.75rem;
-    cursor: pointer;
-    font-size: 0.875rem;
-}
+        /* APPLICATION DESIGN TOKENS AND SHELL
+           Defines the default palette and the shared page canvas used by every screen. */
+        :root {
+            --ink: #24211f;
+            --muted: #716a63;
+            --paper: #fffdf8;
+            --panel: #ffffff;
+            --line: #e6ded2;
+            --accent: #256f63;
+            --accent-strong: #164e46;
+            --rose: #b84a62;
+            --gold: #d89b36;
+            --wash: #f3efe6;
+        }
 
-.geo-suggestion:hover {
-    background: #f0f7ff;
-}
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(37, 111, 99, 0.13), transparent 34rem),
+                linear-gradient(180deg, #fbf7ef 0%, #f4efe5 46%, #efe9dd 100%);
+            color: var(--ink);
+        }
 
-.photo-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.34;
+            background-image:
+                linear-gradient(rgba(36, 33, 31, 0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(36, 33, 31, 0.025) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
 
-.photo-name {
-    font-size: 0.875rem;
-    color: #555;
-}
+        .app {
+            max-width: 1040px;
+            padding: 1.25rem clamp(1rem, 3vw, 2rem) 4rem;
+        }
 
-.main {
-    max-width: 900px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-}
+        /* SHARED PAGE HERO
+           Provides the visual introduction and primary action area used by content pages. */
+        .page-hero {
+            min-height: 190px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
+            margin: 0 0 1.1rem;
+            padding: clamp(1.2rem, 3vw, 2rem);
+            border: 1px solid rgba(36, 33, 31, 0.08);
+            border-radius: 8px;
+            background:
+                linear-gradient(115deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.68) 46%, rgba(37,111,99,0.15) 100%),
+                url("/photos/cover.jpg");
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 22px 65px rgba(64, 51, 35, 0.12);
+        }
 
-.memory-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
+        .page-hero h1 {
+            max-width: 620px;
+            font-size: clamp(2rem, 5vw, 4.1rem);
+            line-height: 0.98;
+            font-weight: 760;
+            letter-spacing: 0;
+        }
 
-.header-controls {
-    margin-left: auto;
-    display: flex;
-    gap: 0.5rem;
-}
+        .eyebrow {
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
 
-.btn-icon {
-    background: rgba(255,255,255,0.15);
-    color: inherit;
-    border: none;
-    padding: 0.35rem 0.6rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.85rem;
-}
+        /* ENHANCED STICKY NAVIGATION
+           Applies the final themed desktop treatment to the global navigation and its tabs. */
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            margin-bottom: 1rem;
+            padding: 0.4rem;
+            border: 1px solid rgba(36, 33, 31, 0.08);
+            border-radius: 8px;
+            background: rgba(255, 253, 248, 0.88);
+            backdrop-filter: blur(18px);
+            box-shadow: 0 8px 24px rgba(64, 51, 35, 0.08);
+        }
 
-.memory-card {
-    background: var(--card);
-    color: var(--text);
-    border-radius: 8px;
-    padding: 1.25rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
+        .nav-tab {
+            border: 0;
+            margin: 0;
+            border-radius: 6px;
+            color: var(--muted);
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
+        }
 
-.memory-card--trashed {
-    opacity: 0.7;
-}
+        .nav-tab.active {
+            background: var(--ink);
+            color: white;
+            border: 0;
+        }
 
-.memory-card.plan-done .memory-title {
-    text-decoration: line-through;
-    opacity: 0.6;
-}
+        /* THEMED COMMAND BUTTONS
+           Applies theme variables and interaction states to shared command controls. */
+        .btn-primary,
+        .btn-ghost {
+            min-height: 42px;
+            border-radius: 6px;
+            font-weight: 750;
+        }
 
-.memory-card-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.5rem;
-    margin-bottom: 0.4rem;
-}
+        .btn-primary {
+            background: var(--accent);
+            box-shadow: 0 10px 22px rgba(37, 111, 99, 0.22);
+        }
 
-.btn-delete {
-    background: transparent;
-    color: #c0392b;
-    font-size: 1rem;
-    padding: 0.1rem 0.3rem;
-}
+        .btn-primary:hover { background: var(--accent-strong); }
 
-.mood-badge {
-    font-size: 1.4rem;
-}
+        .btn-ghost {
+            background: rgba(255,255,255,0.72);
+            border-color: var(--line);
+            color: var(--ink);
+        }
 
-.memory-title {
-    font-size: 1.2rem;
-    margin-bottom: 0.4rem;
-}
+        .hero-action { flex: 0 0 auto; }
 
-.memory-time {
-    color: #666;
-    font-size: 0.875rem;
-    margin-bottom: 0.4rem;
-}
+        /* HOME PAGE: OVERVIEW AND HERO
+           Structures the dashboard introduction, quick navigation, and summary snapshots. */
+        .home-page {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
 
-.memory-location {
-    color: #555;
-    font-size: 0.875rem;
-    margin-bottom: 0.4rem;
-}
+        .home-hero {
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: clamp(1.25rem, 4vw, 2.4rem);
+            border: 1px solid color-mix(in srgb, var(--accent) 13%, transparent);
+            border-radius: 8px;
+            background:
+                linear-gradient(115deg, color-mix(in srgb, var(--paper) 96%, transparent) 0%, color-mix(in srgb, var(--paper) 76%, transparent) 48%, color-mix(in srgb, var(--rose) 20%, transparent) 100%),
+                url("/photos/cover.jpg");
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 24px 70px color-mix(in srgb, var(--ink) 13%, transparent);
+        }
 
-.memory-desc {
-    margin-top: 0.5rem;
-    line-height: 1.5;
-}
+        .home-hero h1 {
+            max-width: 900px;
+            font-size: clamp(2.25rem, 6vw, 5rem);
+            line-height: 0.95;
+            letter-spacing: 0;
+            text-align: center;
+        }
 
-.memory-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    margin-top: 0.75rem;
-}
+        .home-lead {
+            max-width: 560px;
+            margin-top: 0.85rem;
+            color: var(--muted);
+            font-size: 1.05rem;
+            line-height: 1.55;
+        }
 
-.tag {
-    background: var(--tag-bg);
-    color: var(--tag-text);
-    padding: 0.2rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-}
+        .home-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            flex: 0 0 auto;
+        }
 
-.error {
-    color: #c0392b;
-    padding: 1rem;
-    background: #fdecea;
-    border-radius: 6px;
-    margin-bottom: 1rem;
-}
+        .home-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
 
-.btn-primary {
-    background: #2980b9;
-    color: white;
-    border: none;
-    padding: 0.5rem 1.2rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.95rem;
-}
+        .home-tile {
+            min-height: 170px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1rem;
+            border: 1px solid color-mix(in srgb, var(--accent) 13%, transparent);
+            border-radius: 8px;
+            background: rgba(255, 253, 248, 0.92);
+            color: var(--ink);
+            text-decoration: none;
+            box-shadow: 0 14px 35px color-mix(in srgb, var(--ink) 9%, transparent);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
 
-.btn-secondary {
-    background: #95a5a6;
-    color: white;
-    border: none;
-    padding: 0.5rem 1.2rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.95rem;
-}
+        .home-tile:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 45px color-mix(in srgb, var(--ink) 13%, transparent);
+        }
 
-.form-overlay {
-    background: white;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
+        .home-tile-kicker {
+            color: var(--accent-strong);
+            font-size: 1.18rem;
+            font-weight: 850;
+        }
 
-.memory-form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
+        .home-tile p {
+            color: var(--muted);
+            line-height: 1.45;
+        }
 
-.memory-form h2 {
-    margin-bottom: 0.5rem;
-}
+        .home-snapshot {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 0.75rem;
+        }
 
-.memory-form label {
-    font-weight: 600;
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
-}
+        .home-snapshot-card {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.95rem 1rem;
+            border: 1px solid color-mix(in srgb, var(--accent) 13%, transparent);
+            border-radius: 8px;
+            background: rgba(255, 253, 248, 0.92);
+            color: var(--ink);
+            text-decoration: none;
+            box-shadow: 0 12px 26px color-mix(in srgb, var(--ink) 8%, transparent);
+        }
 
-.memory-form input,
-.memory-form textarea {
-    padding: 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 0.95rem;
-    font-family: inherit;
-}
+        .home-snapshot strong {
+            color: var(--accent-strong);
+            font-size: 1.5rem;
+        }
 
-.memory-form textarea {
-    min-height: 80px;
-    resize: vertical;
-}
+        .home-snapshot span {
+            color: var(--muted);
+            font-weight: 700;
+            text-align: left;
+        }
 
-.form-actions {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 0.5rem;
-}
+        .snapshot-event-list {
+            display: grid;
+            gap: 0.2rem;
+            justify-items: end;
+        }
+
+        .snapshot-event-list span {
+            display: block;
+            text-align: right;
+        }
+
+
+        /* HOME PAGE: HIGHLIGHT PANELS
+           Arranges previews of recent memories, plans, and today's historical memories. */
+        .home-highlights {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr) minmax(0, 0.9fr);
+            gap: 1rem;
+        }
+
+        .home-panel,
+        .note-card,
+        .notes-empty {
+            border: 1px solid color-mix(in srgb, var(--accent) 13%, transparent);
+            border-radius: 8px;
+            background: rgba(255, 253, 248, 0.94);
+            box-shadow: 0 14px 35px color-mix(in srgb, var(--ink) 9%, transparent);
+        }
+
+        .home-panel {
+            min-height: 230px;
+            padding: 1rem;
+        }
+
+        .home-panel-link {
+            color: var(--ink);
+            text-decoration: none;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .home-panel-link:hover,
+        .home-snapshot-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 45px color-mix(in srgb, var(--ink) 13%, transparent);
+        }
+
+        .memory-panel {
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--paper) 94%, transparent), color-mix(in srgb, var(--paper) 88%, transparent)),
+                radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--rose) 12%, transparent), transparent 16rem);
+        }
+
+        .plans-panel {
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.94), rgba(246,251,247,0.9)),
+                radial-gradient(circle at 0% 100%, rgba(111,143,122,0.15), transparent 15rem);
+        }
+
+        .today-panel {
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.94), rgba(255,249,239,0.9)),
+                radial-gradient(circle at 100% 100%, rgba(213,155,71,0.17), transparent 15rem);
+        }
+
+        .stats-panel {
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--paper) 94%, transparent), color-mix(in srgb, var(--paper) 88%, transparent)),
+                radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 15rem);
+        }
+
+        /* GLOBAL DIALOGS
+           Styles confirmation and information overlays used by destructive actions and errors. */
+        .confirm-dialog {
+            background: white;
+            border-radius: 14px;
+            padding: 1.75rem 2rem;
+            width: 360px;
+            max-width: 90vw;
+            box-shadow: 0 20px 60px color-mix(in srgb, var(--ink) 22%, transparent);
+            text-align: center;
+        }
+
+        .confirm-message {
+            font-size: 1.05rem;
+            font-weight: 700;
+            line-height: 1.4;
+            margin-bottom: 1.25rem;
+            color: var(--ink);
+        }
+
+        .confirm-actions {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        /* NAVIGATION UTILITIES
+           Styles the language switcher and trash shortcut placed after the main page tabs. */
+        .nav-lang-btn {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: var(--accent-strong);
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 900;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            letter-spacing: 0.04em;
+            opacity: 0.5;
+            transition: opacity 0.15s;
+        }
+        .nav-lang-btn:hover { background: none; opacity: 1; }
+
+        .nav-trash-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            opacity: 0.5;
+            transition: opacity 0.15s;
+        }
+        .nav-trash-btn:hover { opacity: 1; }
+
+        /* TRASH PANEL
+           Presents soft-deleted records with restore and permanent-delete controls. */
+        .trash-panel {
+            background: #fff;
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+            width: 460px;
+            max-width: 95vw;
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        }
+        .trash-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        .trash-panel-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        .trash-panel-body {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
+        .trash-empty {
+            text-align: center;
+            color: #aaa;
+            padding: 1.5rem 0;
+        }
+        .trash-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .trash-entry {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.5rem 0.6rem;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .trash-entry-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+            min-width: 0;
+        }
+        .trash-entry-kind {
+            font-size: 0.7rem;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .trash-entry-name {
+            font-size: 0.93rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .trash-entry-actions {
+            display: flex;
+            gap: 0.4rem;
+            flex-shrink: 0;
+        }
+        .btn-sm {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.6rem;
+        }
+        .btn-danger {
+            color: #c0392b;
+        }
+        .btn-danger:hover {
+            background: #fdecea;
+        }
+
+        /* HOME PAGE: COMPACT CONTENT PREVIEWS
+           Defines shared headings, empty states, and condensed memory/note preview rows. */
+        .panel-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .panel-title-row h2 {
+            font-size: 1.08rem;
+            line-height: 1.15;
+        }
+
+        .panel-title-row span {
+            display: grid;
+            place-items: center;
+            min-width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--wash);
+            color: var(--accent-strong);
+            font-weight: 850;
+        }
+
+        .panel-empty {
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .mini-list,
+        .note-chip-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+
+        .mini-memory {
+            display: grid;
+            grid-template-columns: 58px minmax(0, 1fr);
+            align-items: center;
+            gap: 0.7rem;
+        }
+
+        .mini-memory img,
+        .mini-memory-fallback {
+            width: 58px;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            object-fit: cover;
+            background: var(--wash);
+        }
+
+        .mini-memory-fallback {
+            display: grid;
+            place-items: center;
+            color: var(--rose);
+            font-size: 1.35rem;
+            font-weight: 800;
+        }
+
+        .mini-memory h3 {
+            overflow: hidden;
+            font-size: 0.98rem;
+            line-height: 1.2;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .mini-memory p {
+            margin-top: 0.18rem;
+            color: var(--muted);
+            font-size: 0.86rem;
+            font-weight: 700;
+        }
+
+        .note-chip {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.65rem;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        .note-chip span,
+        .note-person {
+            width: fit-content;
+            padding: 0.25rem 0.5rem;
+            border-radius: 999px;
+            background: rgba(37, 111, 99, 0.12);
+            color: var(--accent-strong);
+            font-size: 0.75rem;
+            font-weight: 850;
+        }
+
+        .note-chip strong {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* HOME PAGE: COUPLE OVERVIEW
+           Lays out both profiles around the shared relationship counter and editor controls. */
+        .couple-section {
+            padding: clamp(1rem, 3vw, 1.4rem);
+            border: 1px solid color-mix(in srgb, var(--accent) 13%, transparent);
+            border-radius: 8px;
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--paper) 96%, transparent), color-mix(in srgb, var(--paper) 90%, transparent)),
+                radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--rose) 12%, transparent), transparent 24rem);
+            box-shadow: 0 18px 45px color-mix(in srgb, var(--ink) 11%, transparent);
+        }
+
+        .couple-header h2 {
+            font-size: clamp(1.5rem, 3vw, 2.4rem);
+            letter-spacing: 0;
+            margin-bottom: 1rem;
+        }
+
+        .couple-stage {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(170px, 0.48fr) minmax(0, 1fr);
+            align-items: start;
+            gap: 1rem;
+        }
+
+        /* PROFILE AVATAR CARDS
+           Provides profile framing plus the original skin, hair, face, and body variants. */
+        .avatar-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            padding: 1rem;
+            border: 1px solid color-mix(in srgb, var(--accent) 13%, transparent);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.82);
+        }
+
+        .avatar-figure {
+            --skin: #f2c7a5;
+            --hair: #5a3326;
+            position: relative;
+            width: min(190px, 70%);
+            aspect-ratio: 1 / 1.22;
+            margin: 0 auto;
+        }
+
+        .avatar-figure.skin-porcelain { --skin: #f7d8c9; }
+        .avatar-figure.skin-light { --skin: #f2c7a5; }
+        .avatar-figure.skin-peach { --skin: #e8ad8b; }
+        .avatar-figure.skin-golden { --skin: #d7a077; }
+        .avatar-figure.skin-olive { --skin: #b88763; }
+        .avatar-figure.skin-brown { --skin: #8c563d; }
+        .avatar-figure.skin-deep { --skin: #5f382d; }
+        .avatar-figure.skin-rose { --skin: #efb4c8; }
+
+        .avatar-figure.hair-black { --hair: #2d2523; }
+        .avatar-figure.hair-brown { --hair: #5a3326; }
+        .avatar-figure.hair-chestnut { --hair: #77462f; }
+        .avatar-figure.hair-blonde { --hair: #d6a64d; }
+        .avatar-figure.hair-platinum { --hair: #eadfc9; }
+        .avatar-figure.hair-ginger { --hair: #b85432; }
+        .avatar-figure.hair-auburn { --hair: #7f2d2f; }
+        .avatar-figure.hair-gray { --hair: #9b9691; }
+        .avatar-figure.hair-pink { --hair: #f0a9bf; }
+        .avatar-figure.hair-blue { --hair: #506fae; }
+
+        .avatar-head {
+            position: absolute;
+            left: 50%;
+            top: 18%;
+            width: 48%;
+            aspect-ratio: 1;
+            transform: translateX(-50%);
+            border-radius: 48% 48% 44% 44%;
+            background: var(--skin);
+            box-shadow: inset 0 -8px 0 color-mix(in srgb, var(--ink) 8%, transparent);
+            z-index: 2;
+        }
+
+        .avatar-neck {
+            position: absolute;
+            left: 50%;
+            top: 56%;
+            width: 18%;
+            height: 16%;
+            transform: translateX(-50%);
+            border-radius: 10px;
+            background: var(--skin);
+            z-index: 1;
+        }
+
+        .avatar-body {
+            position: absolute;
+            left: 50%;
+            bottom: 5%;
+            width: 66%;
+            height: 34%;
+            transform: translateX(-50%);
+            border-radius: 42% 42% 12px 12px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        }
+
+        .avatar-figure.man .avatar-body {
+            background: linear-gradient(135deg, var(--sage), var(--accent-strong));
+        }
+
+        .avatar-figure.neutral .avatar-body {
+            background: linear-gradient(135deg, var(--gold), var(--sage));
+        }
+
+        .avatar-hair.back {
+            position: absolute;
+            left: 50%;
+            top: 15%;
+            width: 58%;
+            height: 46%;
+            transform: translateX(-50%);
+            border-radius: 48% 48% 42% 42%;
+            background: var(--hair);
+            z-index: 1;
+        }
+
+        .avatar-figure.hair-long .avatar-hair.back {
+            height: 68%;
+            border-radius: 48% 48% 32% 32%;
+        }
+
+        .avatar-hair.front {
+            position: absolute;
+            left: 0;
+            top: -7%;
+            width: 100%;
+            height: 38%;
+            border-radius: 50% 50% 38% 20%;
+            background: var(--hair);
+        }
+
+        .avatar-figure.hair-short .avatar-hair.front {
+            height: 30%;
+            border-radius: 50% 50% 20% 20%;
+        }
+
+        .avatar-figure.hair-buzz .avatar-hair.back {
+            height: 34%;
+            width: 52%;
+        }
+
+        .avatar-figure.hair-buzz .avatar-hair.front {
+            height: 22%;
+            border-radius: 50% 50% 18% 18%;
+        }
+
+        .avatar-figure.hair-bob .avatar-hair.back {
+            height: 54%;
+            width: 62%;
+            border-radius: 48% 48% 18% 18%;
+        }
+
+        .avatar-figure.hair-bob .avatar-hair.front {
+            height: 34%;
+            border-radius: 50% 50% 22% 40%;
+        }
+
+        .avatar-figure.hair-curly .avatar-hair.back,
+        .avatar-figure.hair-curly .avatar-hair.front {
+            border-radius: 45% 55% 38% 44%;
+            filter: drop-shadow(8px 0 0 var(--hair)) drop-shadow(-8px 2px 0 var(--hair));
+        }
+
+        .avatar-eye {
+            position: absolute;
+            top: 50%;
+            width: 7%;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: #302226;
+        }
+
+        .avatar-eye.left { left: 32%; }
+        .avatar-eye.right { right: 32%; }
+
+        .avatar-smile {
+            position: absolute;
+            left: 50%;
+            top: 66%;
+            width: 25%;
+            height: 13%;
+            transform: translateX(-50%);
+            border-bottom: 3px solid rgba(48, 34, 38, 0.65);
+            border-radius: 0 0 999px 999px;
+        }
+
+        /* PROFILE BIRTHDAY BADGE
+           Shows a profile's birthday and related compact metadata below the avatar. */
+        .avatar-birthday {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.7rem 0.8rem;
+            border-radius: 8px;
+            background: color-mix(in srgb, var(--rose) 8%, transparent);
+        }
+
+        .avatar-birthday span {
+            color: var(--accent-strong);
+            font-size: 1.25rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .avatar-birthday strong {
+            color: var(--accent-strong);
+        }
+
+        .zodiac-icon {
+            display: grid;
+            place-items: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.82);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 13%, transparent);
+        }
+
+        /* PROFILE IDENTITY AND EDIT ACTIONS
+           Aligns avatar names, unnamed placeholders, and controls that open profile editing. */
+        .avatar-display-card {
+            position: relative;
+            padding-bottom: 3.6rem;
+        }
+
+        .avatar-name {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 1.45rem;
+            text-align: center;
+            font-size: 1.2rem;
+            letter-spacing: 0;
+        }
+
+        .avatar-name-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            flex: 0 0 10px;
+            border-radius: 50%;
+            background: #9b9b9b;
+        }
+
+        .avatar-edit-button {
+            position: absolute;
+            right: 0.75rem;
+            bottom: 0.75rem;
+            display: grid;
+            place-items: center;
+            width: 40px;
+            height: 40px;
+            border: 0;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 10px 22px color-mix(in srgb, var(--accent) 24%, transparent);
+        }
+
+        .avatar-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+
+        /* SHARED MODAL LAYER
+           Covers the application and centers profile, relationship, theme, and confirmation dialogs. */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            display: grid;
+            place-items: center;
+            padding: 1rem;
+            background: rgba(48, 34, 38, 0.38);
+            backdrop-filter: blur(8px);
+        }
+
+        /* AVATAR EDITOR
+           Defines the profile preview and option controls inside the avatar editing dialog. */
+        .avatar-editor-modal {
+            width: min(760px, 100%);
+            max-height: min(88vh, 760px);
+            overflow: auto;
+            padding: clamp(1rem, 3vw, 1.4rem);
+            border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+            border-radius: 8px;
+            background: var(--paper);
+            box-shadow: 0 28px 80px rgba(48, 34, 38, 0.28);
+        }
+
+        .avatar-editor-preview {
+            display: grid;
+            grid-template-columns: minmax(180px, 0.52fr) minmax(0, 1fr);
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            background: color-mix(in srgb, var(--rose) 7%, transparent);
+        }
+
+        /* HOME PAGE: RELATIONSHIP HEART COUNTER
+           Displays days together inside the selected heart colour and supports the empty state. */
+        .heart-counter {
+            position: relative;
+            min-height: 230px;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.75rem;
+            color: var(--ink);
+            text-align: center;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .heart-counter.heart-red { --heart: #d62636; }
+        .heart-counter.heart-pink { --heart: #e85d9e; }
+        .heart-counter.heart-purple { --heart: #7b4bd6; }
+        .heart-counter.heart-blue { --heart: #1f68d8; }
+        .heart-counter.heart-green { --heart: #248a4a; }
+        .heart-counter.heart-yellow { --heart: #f0c51f; color: #302226; }
+        .heart-counter.heart-orange { --heart: #f28a22; }
+        .heart-counter.heart-gray { --heart: #777777; }
+        .heart-counter.heart-black { --heart: #202020; }
+
+        .heart-counter::before {
+            content: "♥";
+            position: static;
+            display: block;
+            color: var(--heart, var(--rose));
+            font-size: 5.25rem;
+            line-height: 1;
+            text-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 22%, transparent);
+            z-index: 0;
+        }
+
+        .heart-counter::after {
+            content: none;
+        }
+
+        .heart-counter.empty-heart::before {
+            opacity: 0.28;
+            text-shadow: none;
+        }
+
+        .heart-counter > * {
+            position: static;
+            z-index: 1;
+        }
+
+        .heart-counter span {
+            color: var(--accent-strong);
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .heart-counter small {
+            color: var(--ink);
+            font-weight: 800;
+        }
+
+        .heart-counter em {
+            max-width: 240px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            font-style: normal;
+            line-height: 1.35;
+        }
+
+        /* HEART EDITOR PREVIEW
+           Mirrors the selected heart colour before relationship settings are saved. */
+        .heart-editor-preview {
+            min-height: 190px;
+            margin: 0 auto 1rem;
+        }
+
+        .heart-editor-preview::before {
+            font-size: 5.5rem;
+        }
+
+        /* CURRENT PROFILE VISUALS
+           Styles uploaded photos and the configurable geometric figure avatar used by the UI. */
+        .avatar-photo {
+            width: min(190px, 74%);
+            aspect-ratio: 1;
+            display: block;
+            margin: 0 auto;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid rgba(255,255,255,0.9);
+            box-shadow: 0 14px 36px color-mix(in srgb, var(--ink) 18%, transparent);
+            background: var(--wash);
+        }
+
+        .avatar-figure {
+            --figure: #d84f75;
+            --line: #302226;
+            width: min(190px, 74%);
+            aspect-ratio: 1 / 1.22;
+        }
+
+        .avatar-figure.figure-rose { --figure: #d84f75; }
+        .avatar-figure.figure-sage { --figure: #6f8f7a; }
+        .avatar-figure.figure-gold { --figure: #d59b47; }
+        .avatar-figure.figure-sky { --figure: #5d8fc9; }
+        .avatar-figure.figure-lilac { --figure: #a179c9; }
+        .avatar-figure.figure-coral { --figure: #e06f5f; }
+        .avatar-figure.figure-mint { --figure: #69b99a; }
+        .avatar-figure.figure-ink { --figure: #302226; --line: #ffffff; }
+        .avatar-figure.figure-black { --figure: #202020; --line: #202020; }
+        .avatar-figure.figure-red { --figure: #d62636; }
+        .avatar-figure.figure-blue { --figure: #1f68d8; }
+        .avatar-figure.figure-green { --figure: #248a4a; }
+        .avatar-figure.figure-yellow { --figure: #f0c51f; --line: #202020; }
+        .avatar-figure.figure-orange { --figure: #f28a22; }
+        .avatar-figure.figure-pink { --figure: #e85d9e; }
+        .avatar-figure.figure-purple { --figure: #7b4bd6; }
+        .avatar-figure.figure-gray { --figure: #777777; }
+
+        .avatar-figure .avatar-head {
+            top: 14%;
+            width: 45%;
+            background: white;
+            border: 5px solid var(--figure);
+            border-radius: 50%;
+            box-shadow: 0 10px 0 color-mix(in srgb, var(--ink) 6%, transparent);
+        }
+
+        .avatar-figure .avatar-body {
+            top: 57%;
+            bottom: auto;
+            width: 52%;
+            height: 30%;
+            border-radius: 50% 50% 16px 16px;
+            background: white;
+            border: 5px solid var(--figure);
+        }
+
+        .avatar-figure .avatar-arm {
+            position: absolute;
+            top: 66%;
+            width: 26%;
+            height: 5px;
+            border-radius: 999px;
+            background: var(--figure);
+        }
+
+        .avatar-figure .avatar-arm.left {
+            left: 16%;
+            transform: rotate(-22deg);
+        }
+
+        .avatar-figure .avatar-arm.right {
+            right: 16%;
+            transform: rotate(22deg);
+        }
+
+        .avatar-figure .avatar-eye {
+            top: 47%;
+            width: 8%;
+            background: var(--line);
+        }
+
+        .avatar-figure.expression-wink .avatar-eye.right {
+            height: 3px;
+            aspect-ratio: auto;
+            border-radius: 999px;
+            top: 51%;
+        }
+
+        .avatar-figure.expression-love .avatar-eye {
+            width: 10%;
+            background: var(--rose);
+            transform: rotate(45deg);
+            border-radius: 2px;
+        }
+
+        .avatar-figure.expression-love .avatar-eye::before,
+        .avatar-figure.expression-love .avatar-eye::after {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: var(--rose);
+        }
+
+        .avatar-figure.expression-love .avatar-eye::before { left: -48%; }
+        .avatar-figure.expression-love .avatar-eye::after { top: -48%; }
+
+        .avatar-figure .avatar-mouth {
+            position: absolute;
+            left: 50%;
+            top: 65%;
+            width: 26%;
+            height: 14%;
+            transform: translateX(-50%);
+            border-bottom: 3px solid var(--line);
+            border-radius: 0 0 999px 999px;
+        }
+
+        .avatar-figure.expression-smile .avatar-mouth {
+            width: 34%;
+        }
+
+        .avatar-figure.expression-laugh .avatar-eye {
+            width: 14%;
+            height: 7%;
+            aspect-ratio: auto;
+            background: transparent;
+            border-radius: 50% 50% 0 0;
+            border-top: 3px solid var(--line);
+            top: 43%;
+        }
+
+        .avatar-figure.expression-laugh .avatar-mouth {
+            width: 42%;
+            height: 23%;
+            border: 3px solid var(--line);
+            background: #1e0a0f;
+            border-radius: 0 0 999px 999px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .avatar-figure.expression-laugh .avatar-mouth::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 32%;
+            background: #f5f0f2;
+        }
+
+        .avatar-figure.expression-neutral .avatar-mouth {
+            width: 26%;
+            height: 3px;
+            border: 0;
+            border-radius: 999px;
+            background: var(--line);
+        }
+
+        .avatar-figure.expression-sad .avatar-mouth {
+            top: 71%;
+            border-bottom: 0;
+            border-top: 3px solid var(--line);
+            border-radius: 999px 999px 0 0;
+        }
+
+        .avatar-figure.expression-angry .avatar-eye.left {
+            transform: rotate(18deg);
+            border-radius: 999px;
+            height: 4px;
+            aspect-ratio: auto;
+        }
+
+        .avatar-figure.expression-angry .avatar-eye.right {
+            transform: rotate(-18deg);
+            border-radius: 999px;
+            height: 4px;
+            aspect-ratio: auto;
+        }
+
+        .avatar-figure.expression-angry .avatar-mouth {
+            width: 24%;
+            height: 3px;
+            border: 0;
+            border-radius: 999px;
+            background: var(--line);
+        }
+
+        .avatar-figure.expression-surprised .avatar-mouth {
+            width: 13%;
+            aspect-ratio: 1;
+            height: auto;
+            border: 3px solid var(--line);
+            border-radius: 50%;
+        }
+
+        /* AVATAR ACCESSORIES
+           Draws optional flower, hat, crown, bow, halo, party, and heart decorations. */
+        .avatar-figure .avatar-accessory {
+            position: absolute;
+            left: 50%;
+            top: -21%;
+            width: 50%;
+            height: 28%;
+            transform: translateX(-50%);
+        }
+
+        .avatar-figure.accessory-none .avatar-accessory { display: none; }
+
+        .avatar-figure.accessory-flower .avatar-accessory {
+            width: 18%;
+            aspect-ratio: 1;
+            height: auto;
+            left: 70%;
+            top: -12%;
+            border-radius: 50%;
+            background: #f5c842;
+            box-shadow:
+                10px 0 0 #e04040,
+                -10px 0 0 #e04040,
+                0 10px 0 #e04040,
+                0 -10px 0 #e04040;
+        }
+
+        .avatar-figure.accessory-hat .avatar-accessory {
+            top: -18%;
+            width: 54%;
+            height: 22%;
+            border-radius: 8px 8px 3px 3px;
+            background: #2a2a2a;
+            box-shadow: 0 16px 0 -5px #2a2a2a;
+        }
+
+        .avatar-figure.accessory-crown .avatar-accessory {
+            top: -14%;
+            width: 48%;
+            height: 22%;
+            background: linear-gradient(135deg, #f5c842, #f0c56f);
+            clip-path: polygon(0 100%, 0 35%, 24% 70%, 50% 10%, 76% 70%, 100% 35%, 100% 100%);
+        }
+
+        .avatar-figure.accessory-bow .avatar-accessory {
+            top: -8%;
+            width: 42%;
+            height: 18%;
+            background:
+                radial-gradient(circle at 20% 50%, #e88aaa 0 33%, transparent 35%),
+                radial-gradient(circle at 80% 50%, #e88aaa 0 33%, transparent 35%),
+                radial-gradient(circle at 50% 50%, #c04060 0 18%, transparent 20%);
+        }
+
+        .avatar-figure.accessory-halo .avatar-accessory {
+            top: -24%;
+            width: 54%;
+            height: 18%;
+            border: 5px solid #f5c842;
+            border-radius: 50%;
+        }
+
+        .avatar-figure.accessory-party .avatar-accessory {
+            top: -22%;
+            width: 34%;
+            height: 34%;
+            background: linear-gradient(135deg, #ff4444, #ff8c00, #f5c842, #44cc44, #4488ff, #aa44dd);
+            clip-path: polygon(50% 0, 0 100%, 100% 100%);
+        }
+
+        .avatar-figure.accessory-heart .avatar-accessory {
+            top: -12%;
+            width: 20%;
+            aspect-ratio: 1;
+            height: auto;
+            background: #e04080;
+            transform: translateX(-50%) rotate(45deg);
+            border-radius: 4px;
+        }
+
+        .avatar-figure.accessory-heart .avatar-accessory::before,
+        .avatar-figure.accessory-heart .avatar-accessory::after {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #e04080;
+        }
+
+        .avatar-figure.accessory-heart .avatar-accessory::before { left: -50%; }
+        .avatar-figure.accessory-heart .avatar-accessory::after { top: -50%; }
+
+        /* THEMED SHARED CARDS AND FORMS
+           Applies the final palette, borders, and elevation to filters, forms, cards, and reminders. */
+        .filter-panel,
+        .form-card,
+        .stats-card,
+        .memory-card,
+        .on-this-day {
+            border: 1px solid rgba(36, 33, 31, 0.08);
+            border-radius: 8px;
+            background: rgba(255, 253, 248, 0.92);
+            box-shadow: 0 14px 35px rgba(64, 51, 35, 0.09);
+        }
+
+        .filter-panel {
+            padding: 0.8rem;
+            align-items: stretch;
+        }
+
+        .filter-input,
+        .form-card input,
+        .form-card textarea,
+        .form-card select {
+            min-height: 42px;
+            border-color: var(--line);
+            border-radius: 6px;
+            background: white;
+            color: var(--ink);
+        }
+
+        .form-card {
+            padding: clamp(1rem, 3vw, 1.6rem);
+            gap: 0.75rem;
+        }
+
+        /* FORM VALIDATION AND FIELD SEMANTICS
+           Marks required, optional, and invalid fields and presents validation feedback. */
+        .field {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .form-card label {
+            color: var(--ink);
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .required-field label::after {
+            content: "";
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            margin-left: 0.45rem;
+            border-radius: 50%;
+            background: var(--rose);
+            vertical-align: 0.08em;
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+        }
+
+        .validation-message {
+            margin: 0.15rem 0 0.35rem;
+            padding: 0.7rem 0.8rem;
+            border: 1px solid rgba(220, 38, 38, 0.22);
+            border-radius: 6px;
+            background: rgba(220, 38, 38, 0.08);
+            color: #b91c1c;
+            font-weight: 800;
+            line-height: 1.35;
+        }
+
+        .invalid-field input,
+        .invalid-field textarea,
+        .invalid-field select,
+        .invalid-field .category-combo {
+            border-color: #dc2626 !important;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+        }
+
+        .invalid-field label::before {
+            content: "!";
+            display: inline-grid;
+            place-items: center;
+            width: 16px;
+            height: 16px;
+            margin-right: 0.35rem;
+            border-radius: 50%;
+            background: #dc2626;
+            color: white;
+            font-size: 0.72rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .soft-field label::after {
+            content: "";
+            display: inline-block;
+            width: 16px;
+            height: 3px;
+            margin-left: 0.45rem;
+            border-radius: 999px;
+            background: var(--line);
+            vertical-align: middle;
+        }
+
+        /* MEMORY DATE AND LOCATION FIELDS
+           Arranges date ranges, geocoded locations, map links, and location preview states. */
+        .date-row {
+            align-items: end;
+            padding: 0.85rem;
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(37,111,99,0.1), rgba(216,155,54,0.13));
+        }
+
+        .location-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.65rem;
+            align-items: stretch;
+        }
+
+        .map-action {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .map-help {
+            max-width: 18rem;
+            color: var(--muted);
+            font-size: 0.76rem;
+            font-weight: 700;
+            line-height: 1.22;
+        }
+
+        .map-link {
+            display: inline-flex;
+            width: fit-content;
+            color: var(--accent);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .map-link:hover { text-decoration: underline; }
+
+        .map-preview {
+            display: grid;
+            place-items: center;
+            width: 46px;
+            min-height: 42px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: var(--accent);
+            color: white;
+            font-size: 1.15rem;
+            text-decoration: none;
+        }
+
+        .map-preview.disabled {
+            background: var(--wash);
+            color: var(--muted);
+        }
+
+        /* MEMORY PHOTO UPLOAD
+           Presents the file drop area, upload affordance, filenames, and preview thumbnails. */
+        .photo-dropzone {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            min-height: 94px;
+            padding: 1rem;
+            border: 2px dashed rgba(37, 111, 99, 0.35);
+            border-radius: 8px;
+            background: rgba(37, 111, 99, 0.07);
+            cursor: pointer;
+        }
+
+        .photo-dropzone p {
+            margin-top: 0.15rem;
+            color: var(--muted);
+            font-size: 0.86rem;
+        }
+
+        .photo-drop-icon {
+            display: grid;
+            place-items: center;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            font-size: 1.8rem;
+            font-weight: 300;
+        }
+
+        .photo-name-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.5rem;
+        }
+
+        /* THEMED MEMORY CARDS
+           Refines timeline typography, metadata, tags, and photo presentation. */
+        .memory-card {
+            overflow: hidden;
+            padding: 1rem;
+            border-left: 0;
+        }
+
+        .memory-card h3 {
+            font-size: 1.22rem;
+            line-height: 1.2;
+        }
+
+        .memory-time {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            padding: 0.36rem 0.55rem;
+            border-radius: 6px;
+            background: color-mix(in srgb, var(--accent) 8%, transparent);
+            color: var(--accent);
+            font-weight: 800;
+            line-height: 1.25;
+        }
+
+        .photo-strip,
+        .photo-preview-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+            gap: 0.55rem;
+            margin-top: 0.9rem;
+        }
+
+        .memory-photo,
+        .photo-thumb {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            object-fit: cover;
+            display: block;
+            border-radius: 7px;
+            background: var(--wash);
+        }
+
+        .photo-preview-item {
+            position: relative;
+        }
+
+        .photo-preview-item .btn-icon {
+            position: absolute;
+            top: 0.35rem;
+            right: 0.35rem;
+            background: rgba(255,255,255,0.9);
+        }
+
+        .tag-chip {
+            background: rgba(37, 111, 99, 0.12);
+            color: var(--accent-strong);
+        }
+
+        /* THEMED CALENDAR AND DAY DETAILS
+           Refines month navigation, day cells, event dots, and selected-day content cards. */
+        .cal-header {
+            padding: 1rem;
+            border: 1px solid rgba(36, 33, 31, 0.08);
+            border-radius: 8px 8px 0 0;
+            background: var(--paper);
+            box-shadow: 0 12px 26px rgba(64, 51, 35, 0.08);
+        }
+
+        .cal-header h2 {
+            font-size: clamp(1.45rem, 3vw, 2.2rem);
+        }
+
+        .cal-grid {
+            gap: 1px;
+            padding: 1px;
+            border: 1px solid rgba(36, 33, 31, 0.08);
+            border-top: 0;
+            border-radius: 0 0 8px 8px;
+            background: var(--line);
+            box-shadow: 0 18px 35px rgba(64, 51, 35, 0.09);
+        }
+
+        .cal-dow {
+            background: #fbf8f1;
+            color: var(--muted);
+            padding: 0.6rem 0.25rem;
+        }
+
+        .cal-cell {
+            align-items: flex-start;
+            justify-content: flex-start;
+            min-height: clamp(76px, 11vw, 126px);
+            padding: 0.55rem;
+            border-radius: 0;
+            background: var(--panel);
+            font-weight: 700;
+        }
+
+        .cal-cell:hover {
+            background: #f6fbf7;
+        }
+
+        .cal-cell.today {
+            color: white;
+            background: var(--accent);
+        }
+
+        .cal-cell.selected {
+            border-color: var(--gold);
+            box-shadow: inset 0 0 0 2px var(--gold);
+        }
+
+        .cal-dot {
+            left: 0.55rem;
+            bottom: 0.55rem;
+            width: 8px;
+            height: 8px;
+            background: var(--rose);
+        }
+
+        .calendar-day-details {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .calendar-day-events {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.85rem;
+        }
+
+        .calendar-event-card {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 1rem;
+            background: var(--panel);
+            box-shadow: 0 12px 28px rgba(70, 40, 45, 0.08);
+        }
+
+        .calendar-event-card h3 {
+            margin: 0.45rem 0 0.25rem;
+            font-size: 1.05rem;
+        }
+
+        .calendar-event-card p {
+            margin: 0;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        /* FINAL ROMANTIC THEME TOKENS
+           Overrides the neutral defaults with the application's primary rose-based visual language. */
+        :root {
+            --ink: #302226;
+            --muted: #7d6870;
+            --paper: #fff9f8;
+            --panel: #ffffff;
+            --line: #ead6db;
+            --accent: #b7435b;
+            --accent-strong: #7f2639;
+            --rose: #d84f75;
+            --gold: #d59b47;
+            --wash: #f8edf0;
+            --sage: #6f8f7a;
+        }
+
+        body {
+            background:
+                radial-gradient(circle at 12% 0%, rgba(216, 79, 117, 0.18), transparent 32rem),
+                radial-gradient(circle at 92% 8%, rgba(111, 143, 122, 0.16), transparent 28rem),
+                linear-gradient(180deg, #fff8f7 0%, #faeef1 48%, #f6ece3 100%);
+        }
+
+        /* FINAL SHARED VISUAL ACCENTS
+           Applies cover imagery, gradients, active navigation, and themed command treatments. */
+        .page-hero {
+            background:
+                linear-gradient(115deg, color-mix(in srgb, var(--paper) 96%, transparent) 0%, color-mix(in srgb, var(--paper) 72%, transparent) 46%, color-mix(in srgb, var(--rose) 18%, transparent) 100%),
+                url("/photos/cover.jpg");
+        }
+
+        .page-hero h1::after,
+        .milestones-hero h1::after {
+            content: "";
+            display: block;
+            width: 86px;
+            height: 4px;
+            margin-top: 0.7rem;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--accent-strong), var(--rose), var(--gold));
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(135deg, var(--accent-strong), var(--rose));
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            box-shadow: 0 10px 22px color-mix(in srgb, var(--accent) 24%, transparent);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--rose), var(--accent-strong));
+        }
+
+        .memory-card {
+            border-top: 3px solid color-mix(in srgb, var(--rose) 36%, transparent);
+        }
+
+        .ann-card {
+            border-top-color: rgba(213, 155, 71, 0.75);
+        }
+
+        .ann-countdown {
+            color: var(--accent);
+        }
+
+        /* IMPORTANT DAYS, NOTES, AND PLANS HEROES
+           Gives related relationship-focused pages a shared compact heading treatment. */
+        .milestones-hero {
+            margin-bottom: 1rem;
+            padding: clamp(1.2rem, 3vw, 1.8rem);
+            border: 1px solid color-mix(in srgb, var(--accent) 13%, transparent);
+            border-radius: 8px;
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--paper) 92%, transparent), color-mix(in srgb, var(--paper) 86%, transparent)),
+                radial-gradient(circle at 100% 0%, rgba(213,155,71,0.18), transparent 18rem);
+            box-shadow: 0 18px 45px color-mix(in srgb, var(--ink) 11%, transparent);
+        }
+
+        .milestones-hero h1 {
+            max-width: 720px;
+            font-size: clamp(1.85rem, 4vw, 3.25rem);
+            line-height: 1.02;
+            letter-spacing: 0;
+        }
+
+        .notes-hero {
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.94), rgba(246,251,247,0.88)),
+                radial-gradient(circle at 100% 0%, rgba(111,143,122,0.18), transparent 18rem);
+        }
+
+        /* NOTES PAGE: SEARCH, TABS, AND CONTENT
+           Arranges note filtering, profile ownership tabs, note cards, and the profile side panel. */
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 0.85rem;
+        }
+
+        .note-searchbar {
+            margin: -0.35rem 0 1rem;
+        }
+
+        .note-searchbar .note-search-input {
+            width: 100%;
+            min-height: 44px;
+            padding: 0.55rem 1rem 0.55rem 2.4rem;
+            border: 1.5px solid color-mix(in srgb, var(--accent) 22%, transparent);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.92) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b84a62' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 0.75rem center;
+            background-size: 16px;
+            box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 7%, transparent);
+            font-size: 0.95rem;
+            color: var(--ink);
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .note-searchbar .note-search-input:focus {
+            outline: none;
+            border-color: var(--rose);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+        }
+
+        .note-tabs-simple {
+            margin-top: 1rem;
+        }
+
+        .notes-section {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .note-section-aside {
+            position: sticky;
+            top: 1rem;
+            padding: 1rem;
+            border: 1px solid color-mix(in srgb, var(--accent) 16%, transparent);
+            border-radius: 8px;
+            background: linear-gradient(135deg, color-mix(in srgb, var(--paper) 95%, transparent), color-mix(in srgb, var(--paper) 78%, transparent));
+            text-align: center;
+            box-shadow: 0 16px 32px color-mix(in srgb, var(--ink) 7%, transparent);
+        }
+
+        .note-section-visual {
+            display: grid;
+            place-items: center;
+            min-height: 150px;
+            margin-bottom: 0.65rem;
+        }
+
+        .note-section-heart {
+            color: var(--rose);
+            font-size: 5rem;
+            line-height: 1;
+        }
+
+        .note-section-visual .avatar-photo {
+            width: 132px;
+            height: 132px;
+            border-radius: 999px;
+            object-fit: cover;
+        }
+
+        .note-section-visual .avatar-figure {
+            width: 140px;
+            margin: 0 auto;
+        }
+
+        .note-section-aside h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            line-height: 1.2;
+        }
+
+        .note-section-aside p {
+            margin: 0.35rem 0 0;
+            color: var(--muted);
+            font-weight: 700;
+            line-height: 1.35;
+        }
+
+        .note-card,
+        .notes-empty {
+            padding: 1rem;
+        }
+
+        .note-card {
+            border-top: 3px solid rgba(111, 143, 122, 0.55);
+        }
+
+        .note-card h3 {
+            margin-top: 0.75rem;
+            font-size: 1.18rem;
+            line-height: 1.2;
+        }
+
+        .note-card p,
+        .notes-empty p {
+            margin-top: 0.55rem;
+            color: var(--muted);
+            line-height: 1.55;
+            white-space: pre-wrap;
+        }
+
+        .note-form textarea {
+            min-height: 140px;
+        }
+
+        /* PAGE-SPECIFIC HERO VARIANTS
+           Tunes background accents for Plans and Statistics without changing their shared structure. */
+        .plans-hero {
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.94), rgba(255,249,239,0.88)),
+                radial-gradient(circle at 100% 0%, rgba(213,155,71,0.18), transparent 18rem);
+        }
+
+        .love-stats {
+            gap: 1rem;
+        }
+
+        .stats-hero-card {
+            padding: clamp(1.4rem, 4vw, 2rem);
+            border: 1px solid color-mix(in srgb, var(--accent) 15%, transparent);
+            border-radius: 8px;
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--paper) 95%, transparent), color-mix(in srgb, var(--paper) 86%, transparent)),
+                radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--rose) 22%, transparent), transparent 13rem);
+            box-shadow: 0 16px 34px color-mix(in srgb, var(--ink) 8%, transparent);
+        }
+
+        .stats-hero-card h1 {
+            max-width: 760px;
+            margin: 0.15rem 0 0.4rem;
+            font-size: clamp(2rem, 4.5vw, 3.45rem);
+            line-height: 1.02;
+        }
+
+        .stats-hero-card p:not(.eyebrow) {
+            max-width: 620px;
+            color: var(--muted);
+            font-weight: 700;
+            line-height: 1.5;
+        }
+
+        /* STATISTICS PAGE: METRICS AND CHARTS
+           Lays out summary metrics, insights, ranking lists, and monthly activity bars. */
+        .stats-metric-grid,
+        .stats-insight-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 0.85rem;
+        }
+
+        .love-stats .stats-card {
+            border: 1px solid color-mix(in srgb, var(--accent) 13%, transparent);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.86);
+            box-shadow: 0 14px 30px color-mix(in srgb, var(--ink) 6%, transparent);
+        }
+
+        .metric-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .metric-card span,
+        .insight-card h3 {
+            color: var(--muted);
+            font-size: 0.78rem;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .metric-card strong {
+            color: var(--accent);
+            font-size: clamp(1.8rem, 4vw, 2.7rem);
+            line-height: 1;
+        }
+
+        .metric-card small,
+        .insight-card small {
+            color: var(--muted);
+            font-weight: 700;
+            line-height: 1.35;
+        }
+
+        .insight-card .stats-big {
+            margin: 0.35rem 0;
+            color: var(--ink);
+            font-size: clamp(1.15rem, 2.4vw, 1.55rem);
+            line-height: 1.2;
+        }
+
+        .stats-wide h3 {
+            color: var(--ink);
+        }
+
+        .love-stats .bar-chart {
+            gap: 0.65rem;
+        }
+
+        .love-stats .bar-label {
+            color: var(--ink);
+            font-weight: 800;
+        }
+
+        .love-stats .bar-track {
+            background: color-mix(in srgb, var(--accent) 12%, transparent);
+        }
+
+        .love-stats .bar-fill {
+            background: linear-gradient(90deg, var(--accent), var(--gold));
+        }
+
+        .love-stats .bar-count {
+            color: var(--muted);
+            font-weight: 800;
+        }
+
+        .love-stats .heat-month { color: var(--muted); }
+        .love-stats .heat-0 { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+        .love-stats .heat-1 { background: color-mix(in srgb, var(--rose) 25%, transparent); }
+        .love-stats .heat-2 { background: color-mix(in srgb, var(--rose) 50%, transparent); }
+        .love-stats .heat-3 { background: color-mix(in srgb, var(--rose) 75%, transparent); }
+        .love-stats .heat-4 { background: var(--rose); }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* PLANS PAGE: TABS AND CATEGORY MANAGEMENT
+           Styles pending/done switching plus category create, rename, and delete panels. */
+        .plan-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid color-mix(in srgb, var(--accent) 15%, transparent);
+            margin-bottom: 1.25rem;
+        }
+
+        .plan-tab {
+            padding: 0.55rem 1.25rem;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--muted);
+            cursor: pointer;
+            transition: color 0.15s, border-color 0.15s;
+        }
+
+        .plan-tab:hover {
+            color: var(--accent);
+        }
+
+        .plan-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .category-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            flex-shrink: 0;
+        }
+        .category-panel-header h3 { margin: 0; font-size: 1.1rem; }
+
+        .category-panel {
+            background: white;
+            border-radius: 14px;
+            padding: 1.5rem;
+            width: 420px;
+            max-width: 92vw;
+            height: 70vh;
+            max-height: 500px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px color-mix(in srgb, var(--ink) 18%, transparent);
+        }
+
+        .category-list {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            padding-right: 0.25rem;
+        }
+
+        .category-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 0.65rem;
+            border-radius: 8px;
+            border: 1px solid rgba(36,33,31,0.09);
+            background: white;
+        }
+
+        .category-row > span {
+            flex: 1;
+            font-weight: 700;
+            font-size: 0.97rem;
+        }
+
+        .category-row.editing {
+            background: var(--wash);
+            border-color: var(--accent);
+        }
+
+        .category-row.editing input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-weight: 700;
+            font-size: 0.97rem;
+            outline: none;
+            padding: 0;
+        }
+
+        .category-row-actions {
+            display: flex;
+            gap: 0.15rem;
+        }
+
+        .category-add-row {
+            display: flex;
+            gap: 0.5rem;
+            padding-top: 0.85rem;
+            border-top: 1px solid rgba(36,33,31,0.1);
+        }
+
+        .category-add-row input {
+            flex: 1;
+        }
+
+        .category-combo {
+            position: relative;
+            display: flex;
+            align-items: stretch;
+        }
+
+        .category-combo input {
+            flex: 1;
+            padding-right: 2.75rem;
+        }
+
+        .category-combo-select {
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            width: 2.75rem;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 1;
+            font-size: 1rem;
+        }
+
+        .category-combo-arrow {
+            position: absolute;
+            right: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: var(--muted);
+            font-size: 0.85rem;
+            line-height: 1;
+        }
+
+        /* SHARED AUTOCOMPLETE MENUS
+           Positions category, tag, and location suggestions below their corresponding fields. */
+        .suggest-field {
+            position: relative;
+            display: flex;
+            align-items: center;
+            flex: 1 1 120px;
+            min-width: 0;
+        }
+        .suggest-field input {
+            flex: 1;
+            min-width: 0;
+            padding-right: 1.8rem !important;
+        }
+        .tag-suggest input {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .suggest-toggle {
+            position: absolute;
+            right: 0.3rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.75rem;
+            color: var(--accent, #9b6b7b);
+            padding: 0.2rem 0.3rem;
+            line-height: 1;
+            opacity: 0.7;
+        }
+        .suggest-toggle:hover { opacity: 1; }
+        .category-suggest {
+            display: block;
+            flex: none;
+            width: 100%;
+        }
+
+        .category-suggest input {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .category-suggest .suggest-toggle {
+            top: 1.3rem;
+        }
+
+        .category-suggest .suggest-dropdown {
+            top: calc(100% + 4px);
+        }
+
+        .suggest-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #e0d0d5;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            z-index: 200;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .suggest-option {
+            padding: 0.45rem 0.75rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .suggest-option:hover {
+            background: #fdf4f6;
+        }
+
+        .category-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .category-header-actions span {
+            display: grid;
+            place-items: center;
+            min-width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--wash);
+            color: var(--accent-strong);
+            font-weight: 850;
+        }
+
+        /* PLANS PAGE: GROUPED PLAN CARDS
+           Organises plans by category and distinguishes completed items from pending ones. */
+        .plan-groups {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .plan-group {
+            padding: 1rem;
+            border: 1px solid color-mix(in srgb, var(--accent) 13%, transparent);
+            border-radius: 8px;
+            background: rgba(255, 253, 248, 0.94);
+            box-shadow: 0 14px 35px color-mix(in srgb, var(--ink) 9%, transparent);
+        }
+
+        .plan-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .plan-card {
+            padding: 1rem;
+            border: 1px solid rgba(36, 33, 31, 0.08);
+            border-top: 3px solid rgba(213, 155, 71, 0.75);
+            border-radius: 8px;
+            background: white;
+        }
+
+        .plan-card.done {
+            opacity: 0.68;
+            border-top-color: rgba(111, 143, 122, 0.75);
+        }
+
+        .plan-card.done h3 {
+            text-decoration: line-through;
+        }
+
+        .plan-card h3 {
+            margin-top: 0.75rem;
+            font-size: 1.14rem;
+            line-height: 1.2;
+        }
+
+        .plan-card p {
+            margin-top: 0.5rem;
+            color: var(--muted);
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .checkbox-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            width: fit-content;
+            color: var(--muted);
+            font-weight: 800;
+        }
+
+        .checkbox-row input {
+            width: 18px;
+            height: 18px;
+            min-height: auto;
+            accent-color: var(--accent);
+        }
+
+        /* IMPORTANT DAYS: RELATIONSHIP COUNTER
+           Presents the start-date setup, days together, and upcoming monthly/yearly milestones. */
+        .relationship-panel {
+            display: grid;
+            grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.5fr);
+            align-items: center;
+            gap: clamp(1.25rem, 4vw, 3rem);
+            margin-bottom: 1.2rem;
+            padding: clamp(1.15rem, 3vw, 1.75rem);
+            border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
+            border-left: 4px solid var(--accent);
+            border-radius: 8px;
+            background: var(--panel);
+            box-shadow: 0 12px 32px color-mix(in srgb, var(--ink) 9%, transparent);
+        }
+
+        .relationship-copy h2 {
+            margin: 0 0 0.45rem;
+            font-size: clamp(1.45rem, 3vw, 2rem);
+            letter-spacing: 0;
+        }
+
+        .relationship-copy p:not(.eyebrow) {
+            margin: 0;
+            max-width: 55ch;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .relationship-content {
+            min-width: 0;
+            display: grid;
+            justify-items: end;
+            gap: 0.65rem;
+        }
+
+        .relationship-form {
+            display: grid;
+            align-content: start;
+            justify-items: start;
+            gap: 0.75rem;
+        }
+
+        .relationship-empty {
+            grid-column: 1 / -1;
+            padding: 0.9rem 1rem;
+            border-radius: 8px;
+            background: color-mix(in srgb, var(--rose) 8%, transparent);
+            color: var(--muted);
+            font-weight: 650;
+        }
+
+        .relationship-stats {
+            width: 100%;
+            display: grid;
+            grid-template-columns: minmax(125px, 0.65fr) repeat(2, minmax(190px, 1fr));
+            gap: 0;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--panel);
+        }
+
+        .love-counter {
+            min-width: 0;
+            min-height: 128px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 1rem 1.15rem;
+            border-left: 1px solid var(--line);
+            background: var(--panel);
+        }
+
+        .love-counter:first-child {
+            border-left: 0;
+        }
+
+        .love-counter .relationship-metric-value {
+            color: var(--accent-strong);
+            font-size: clamp(1.6rem, 3vw, 2.4rem);
+            font-weight: 850;
+            line-height: 1;
+            overflow-wrap: anywhere;
+        }
+
+        .love-counter small {
+            color: var(--muted);
+            line-height: 1.3;
+        }
+
+        .love-counter.primary {
+            align-items: center;
+            text-align: center;
+            background: var(--accent-strong);
+        }
+
+        .love-counter.primary .relationship-metric-value,
+        .love-counter.primary small {
+            color: white;
+        }
+
+        .relationship-metric-label,
+        .relationship-event-label {
+            font-weight: 800;
+        }
+
+        .relationship-event-label {
+            order: -1;
+            color: var(--ink) !important;
+        }
+
+        .relationship-event .relationship-metric-value {
+            font-size: clamp(1.4rem, 2.5vw, 2rem);
+            overflow-wrap: normal;
+            white-space: nowrap;
+        }
+
+        .relationship-event-date {
+            font-weight: 650;
+        }
+
+        .relationship-edit-action {
+            margin: 0;
+        }
+
+        .date-row {
+            background: linear-gradient(135deg, color-mix(in srgb, var(--rose) 10%, transparent), color-mix(in srgb, var(--gold) 14%, transparent));
+        }
+
+        .map-preview,
+        .photo-drop-icon {
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        }
+
+        .photo-dropzone {
+            border-color: color-mix(in srgb, var(--rose) 34%, transparent);
+            background: color-mix(in srgb, var(--rose) 7%, transparent);
+        }
+
+        .cal-cell.today {
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        }
+
+        /* INTERMEDIATE WIDTH ADAPTATION
+           Stacks the relationship summary before the compact desktop layout becomes too narrow. */
+        @media (max-width: 900px) {
+            .relationship-panel {
+                grid-template-columns: 1fr;
+                align-items: stretch;
+            }
+
+            .relationship-content {
+                justify-items: stretch;
+            }
+
+            .relationship-edit-action {
+                justify-self: end;
+            }
+        }
+
+        /* NARROW VIEWPORT FALLBACK
+           Prevents overflow by stacking grids and forms when the desktop window is very narrow. */
+        @media (max-width: 720px) {
+            .page-hero {
+                align-items: flex-start;
+                flex-direction: column;
+                min-height: 220px;
+            }
+
+            .home-hero {
+                align-items: center;
+                flex-direction: column;
+                min-height: 320px;
+            }
+
+            .home-grid,
+            .home-snapshot,
+            .home-highlights {
+                grid-template-columns: 1fr;
+            }
+
+            .couple-stage {
+                grid-template-columns: 1fr;
+            }
+
+            .heart-counter {
+                min-height: 190px;
+                min-width: 100%;
+                order: -1;
+            }
+
+            .heart-counter::before {
+                font-size: 5rem;
+            }
+
+            .nav {
+                overflow-x: auto;
+            }
+
+            .nav-tab {
+                flex: 0 0 auto;
+            }
+
+            .form-row,
+            .date-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .cal-cell {
+                min-height: 58px;
+                padding: 0.4rem;
+            }
+
+            .relationship-panel,
+            .relationship-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .love-counter {
+                min-height: 104px;
+                border-top: 1px solid var(--line);
+                border-left: 0;
+            }
+
+            .love-counter:first-child {
+                border-top: 0;
+            }
+
+            .notes-section {
+                grid-template-columns: 1fr;
+            }
+
+            .note-section-aside {
+                position: static;
+                order: -1;
+            }
+        }
+
+
+        /* COLOUR THEME PALETTES
+           Each class replaces shared design tokens when the user selects a theme in the navigation. */
+
+        .theme-blue {
+            --ink: #1e2a40;
+            --muted: #5a6a8e;
+            --paper: #f7f9ff;
+            --panel: #ffffff;
+            --line: #c8d8f0;
+            --accent: #2563a3;
+            --accent-strong: #1a4a7a;
+            --rose: #4a7fd4;
+            --gold: #5a9ab5;
+            --wash: #eef3fb;
+            --sage: #4a8070;
+        }
+
+        .theme-sage {
+            --ink: #1e2e22;
+            --muted: #5a7060;
+            --paper: #f7fbf8;
+            --panel: #ffffff;
+            --line: #c8e0cc;
+            --accent: #3a7050;
+            --accent-strong: #266040;
+            --rose: #4a9068;
+            --gold: #8ab050;
+            --wash: #edf5ef;
+            --sage: #4a9068;
+        }
+
+        .theme-purple {
+            --ink: #221838;
+            --muted: #6a5a80;
+            --paper: #faf8ff;
+            --panel: #ffffff;
+            --line: #d8c8f0;
+            --accent: #6a3ab0;
+            --accent-strong: #4a2480;
+            --rose: #8a4ad0;
+            --gold: #a06ab0;
+            --wash: #f3eeff;
+            --sage: #7a50c0;
+        }
+
+        /* COOL THEME PAGE BACKGROUNDS
+           Extends blue, sage, and purple palettes from the app container onto the document body. */
+        body:has(.theme-blue) {
+            background:
+                radial-gradient(circle at 12% 0%, rgba(70, 127, 212, 0.18), transparent 32rem),
+                radial-gradient(circle at 92% 8%, rgba(37, 99, 163, 0.14), transparent 28rem),
+                linear-gradient(180deg, #f7f9ff 0%, #eef2fc 48%, #e5edf8 100%);
+        }
+
+        body:has(.theme-sage) {
+            background:
+                radial-gradient(circle at 12% 0%, rgba(74, 144, 104, 0.18), transparent 32rem),
+                radial-gradient(circle at 92% 8%, rgba(58, 112, 80, 0.14), transparent 28rem),
+                linear-gradient(180deg, #f7fbf8 0%, #eef5ef 48%, #e5f0e6 100%);
+        }
+
+        body:has(.theme-purple) {
+            background:
+                radial-gradient(circle at 12% 0%, rgba(138, 74, 208, 0.18), transparent 32rem),
+                radial-gradient(circle at 92% 8%, rgba(106, 58, 176, 0.14), transparent 28rem),
+                linear-gradient(180deg, #faf8ff 0%, #f3eeff 48%, #ece5fa 100%);
+        }
+
+        /* ADDITIONAL THEME PALETTES
+           Supplies warm, green, blue, brown, and neutral alternatives for the theme picker. */
+        .theme-red {
+            --ink: #2a1010; --muted: #7a4040; --paper: #fff8f8; --panel: #ffffff;
+            --line: #f0c0c0; --accent: #c0392b; --accent-strong: #8b0000;
+            --rose: #e74c3c; --gold: #d4803a; --wash: #feeaea; --sage: #7a4040;
+        }
+
+        .theme-orange {
+            --ink: #2a1a08; --muted: #7a5030; --paper: #fff9f5; --panel: #ffffff;
+            --line: #f0d0b0; --accent: #e06c00; --accent-strong: #a04800;
+            --rose: #f08030; --gold: #e0b040; --wash: #fef0e0; --sage: #6a6030;
+        }
+
+        .theme-yellow {
+            --ink: #241e06; --muted: #6e6030; --paper: #fdfdf0; --panel: #ffffff;
+            --line: #e8e0a0; --accent: #c49a00; --accent-strong: #8a6c00;
+            --rose: #d4b400; --gold: #c49a00; --wash: #fafae0; --sage: #607840;
+        }
+
+        .theme-teal {
+            --ink: #082020; --muted: #3a6a68; --paper: #f4fbfb; --panel: #ffffff;
+            --line: #a8dada; --accent: #0e7f78; --accent-strong: #085850;
+            --rose: #169e96; --gold: #4a9a80; --wash: #e4f8f8; --sage: #0e7f78;
+        }
+
+        .theme-light-green {
+            --ink: #142010; --muted: #4a7050; --paper: #f6fbf6; --panel: #ffffff;
+            --line: #c0e4c0; --accent: #4a9450; --accent-strong: #2a7030;
+            --rose: #62b468; --gold: #90bc50; --wash: #eaf5ea; --sage: #4a9450;
+        }
+
+        .theme-light-blue {
+            --ink: #0a1e2a; --muted: #3a607a; --paper: #f4f8fb; --panel: #ffffff;
+            --line: #a0c8d8; --accent: #0e7f9e; --accent-strong: #08506a;
+            --rose: #169ec0; --gold: #4a9ab0; --wash: #e4f4f8; --sage: #0e7f9e;
+        }
+
+        .theme-dark-navy {
+            --ink: #0a101e; --muted: #3a4050; --paper: #f4f6fb; --panel: #ffffff;
+            --line: #a0a8c0; --accent: #0e3f9e; --accent-strong: #082860;
+            --rose: #1640c0; --gold: #4a7ab0; --wash: #e4eaf8; --sage: #0e3f9e;
+        }
+
+        .theme-brown {
+            --ink: #2a1e10; --muted: #6a5030; --paper: #f8f4ef; --panel: #ffffff;
+            --line: #d8c0a0; --accent: #7a5030; --accent-strong: #4a3010;
+            --rose: #8a6040; --gold: #a07040; --wash: #f3e8dc; --sage: #6a5030;
+        }
+
+        .theme-gray {
+            --ink: #1e1e24; --muted: #6e6e80; --paper: #f8f8fa; --panel: #ffffff;
+            --line: #d0d0dc; --accent: #6b7280; --accent-strong: #4a505a;
+            --rose: #8090a0; --gold: #9090a0; --wash: #f0f0f4; --sage: #6b7280;
+        }
+
+
+        /* ADDITIONAL THEME PAGE BACKGROUNDS
+           Gives each selectable palette a matching full-window background treatment. */
+        body:has(.theme-red) {
+            background: radial-gradient(circle at 12% 0%, rgba(231,76,60,0.14), transparent 32rem),
+                        radial-gradient(circle at 92% 8%, rgba(192,57,43,0.10), transparent 28rem),
+                        linear-gradient(180deg, #fff8f8 0%, #feeaea 48%, #fddada 100%);
+        }
+
+        body:has(.theme-orange) {
+            background: radial-gradient(circle at 12% 0%, rgba(240,128,48,0.14), transparent 32rem),
+                        radial-gradient(circle at 92% 8%, rgba(224,108,0,0.10), transparent 28rem),
+                        linear-gradient(180deg, #fff9f5 0%, #fef0e0 48%, #fde0c8 100%);
+        }
+
+        body:has(.theme-yellow) {
+            background: radial-gradient(circle at 12% 0%, rgba(212,180,0,0.14), transparent 32rem),
+                        radial-gradient(circle at 92% 8%, rgba(196,154,0,0.10), transparent 28rem),
+                        linear-gradient(180deg, #fdfdf0 0%, #fafae0 48%, #f5f5c8 100%);
+        }
+
+        body:has(.theme-teal) {
+            background: radial-gradient(circle at 12% 0%, rgba(22,158,150,0.14), transparent 32rem),
+                        radial-gradient(circle at 92% 8%, rgba(14,127,120,0.10), transparent 28rem),
+                        linear-gradient(180deg, #f4fbfb 0%, #e4f8f8 48%, #d0f0f0 100%);
+        }
+
+        body:has(.theme-dark-green) {
+            background: radial-gradient(circle at 12% 0%, rgba(56,136,78,0.14), transparent 32rem),
+                        radial-gradient(circle at 92% 8%, rgba(40,106,60,0.10), transparent 28rem),
+                        linear-gradient(180deg, #f5fbf6 0%, #e8f5ea 48%, #d8eeda 100%);
+        }
+
+        body:has(.theme-light-green) {
+            background: radial-gradient(circle at 12% 0%, rgba(98,180,104,0.14), transparent 32rem),
+                        radial-gradient(circle at 92% 8%, rgba(74,148,80,0.10), transparent 28rem),
+                        linear-gradient(180deg, #f6fbf6 0%, #eaf5ea 48%, #daf0da 100%);
+        }
+
+        body:has(.theme-black) {
+            background: radial-gradient(circle at 12% 0%, rgba(192,128,232,0.12), transparent 32rem),
+                        radial-gradient(circle at 92% 8%, rgba(144,96,208,0.08), transparent 28rem),
+                        linear-gradient(180deg, #16101e 0%, #201828 48%, #180e20 100%);
+        }
+
+        body:has(.theme-gray) {
+            background: radial-gradient(circle at 12% 0%, rgba(128,144,160,0.14), transparent 32rem),
+                        radial-gradient(circle at 92% 8%, rgba(107,114,128,0.10), transparent 28rem),
+                        linear-gradient(180deg, #f8f8fa 0%, #f0f0f4 48%, #e8e8ee 100%);
+        }
+
+        body:has(.theme-rainbow) {
+            background: linear-gradient(
+                120deg,
+                #fff0f3 0%,
+                #fff5e9 17%,
+                #fffbe6 33%,
+                #edfaf2 50%,
+                #edf6ff 67%,
+                #f2efff 83%,
+                #fff0f8 100%
+            );
+        }
+
+        body:has(.theme-white) {
+            background: #ffffff;
+        }
+
+        body:has(.theme-white)::before {
+            opacity: 0.1;
+        }
+
+        /* RAINBOW THEME ACCENTS
+           Replaces selected high-emphasis components with the softer diagonal rainbow spectrum. */
+        .theme-rainbow .nav-tab.active,
+        .theme-rainbow .btn-primary,
+        .theme-rainbow .love-counter.primary,
+        .theme-rainbow .cal-cell.today,
+        .theme-rainbow .map-preview,
+        .theme-rainbow .photo-drop-icon {
+            background: var(--rainbow-spectrum);
+        }
+
+        .theme-rainbow .page-hero h1::after,
+        .theme-rainbow .milestones-hero h1::after {
+            width: 132px;
+            background: var(--rainbow-spectrum);
+        }
+
+        /* NAVIGATION THEME BUTTON
+           Provides the compact colour-palette action that opens theme selection. */
+        .nav-theme-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            line-height: 1;
+            opacity: 0.5;
+            transition: opacity 0.15s;
+        }
+        .nav-theme-btn:hover { opacity: 1; }
+
+        /* THEME PICKER DIALOG
+           Lays out selectable colour swatches and indicates the currently active palette. */
+        .theme-picker {
+            background: var(--paper, white);
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+            width: 260px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+            text-align: center;
+        }
+
+        .theme-picker-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .theme-picker-header h3 {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .theme-swatches {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            max-width: 220px;
+            margin: 0 auto;
+        }
+
+        .theme-swatch {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid color-mix(in srgb, var(--ink, #302226) 18%, transparent);
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            outline: none;
+        }
+
+        .theme-swatch:hover { transform: scale(1.12); }
+
+        .theme-swatch.active {
+            box-shadow: 0 0 0 3px white, 0 0 0 5px var(--ink, #302226);
+        }
+
+        /* RELATIONSHIP DATE EDITOR
+           Sizes and styles the modal used to create or update the relationship start date. */
+        .relationship-editor-modal {
+            width: min(400px, 100%);
+            padding: clamp(1rem, 3vw, 1.4rem);
+            border-radius: 8px;
+            background: var(--paper, white);
+            box-shadow: 0 28px 80px rgba(48, 34, 38, 0.28);
+        }
+
+        /* DIARY PAGE SHELL
+           Establishes the personal journal layout shared by both profile-owned diaries. */
+        .diary-page {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: clamp(1rem, 3vw, 2rem);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        /* DIARY OWNER SWITCHER
+           Changes between the left and right profile's entries and highlights the active owner. */
+        .diary-owner-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid color-mix(in srgb, var(--accent) 15%, transparent);
+        }
+
+        .diary-owner-btn {
+            padding: 0.5rem 1.25rem;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--muted);
+            cursor: pointer;
+            transition: color 0.15s, border-color 0.15s;
+        }
+
+        .diary-owner-btn:hover { color: var(--accent); }
+
+        .diary-owner-btn--active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        /* DIARY WRITE AREA
+           Styles the always-visible date and text form used for new and edited entries. */
+        .diary-write-area {
+            background: var(--paper);
+            border: 1.5px solid color-mix(in srgb, var(--accent) 18%, transparent);
+            border-radius: 8px;
+            padding: 1rem 1.25rem 0.85rem;
+            box-shadow: 0 4px 16px color-mix(in srgb, var(--ink) 6%, transparent);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .diary-write-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .diary-date-input {
+            border: none;
+            background: transparent;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--muted);
+            font-style: italic;
+            cursor: pointer;
+            padding: 0;
+            outline: none;
+        }
+
+        .diary-date-input:focus { color: var(--accent); }
+
+        .diary-cancel-edit {
+            background: none;
+            border: none;
+            font-size: 0.8rem;
+            color: var(--muted);
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+        }
+
+        .diary-write-textarea {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 1rem;
+            line-height: 1.8;
+            resize: none;
+            outline: none;
+            color: var(--ink);
+            box-sizing: border-box;
+            padding: 0.25rem 0;
+        }
+
+        .diary-write-textarea::placeholder { color: color-mix(in srgb, var(--muted) 60%, transparent); }
+
+        .diary-validation {
+            font-size: 0.8rem;
+            color: var(--accent);
+            margin: 0;
+        }
+
+        .diary-write-footer {
+            display: flex;
+            justify-content: flex-end;
+            padding-top: 0.25rem;
+            border-top: 1px solid color-mix(in srgb, var(--accent) 10%, transparent);
+        }
+
+        .diary-save-btn { font-size: 0.9rem; padding: 0.45rem 1.25rem; }
+
+        /* DIARY ENTRY BOOK
+           Presents saved entries chronologically with edit/delete controls and an empty state. */
+        .diary-book {
+            border: 1px solid color-mix(in srgb, var(--accent) 14%, transparent);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 8px 28px color-mix(in srgb, var(--ink) 7%, transparent);
+        }
+
+        .diary-book-entry {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid color-mix(in srgb, var(--accent) 10%, transparent);
+            background: var(--paper);
+        }
+
+        .diary-book-entry:last-child { border-bottom: none; }
+
+        .diary-book-entry-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.4rem;
+        }
+
+        .diary-book-date {
+            font-size: 0.8rem;
+            font-weight: 700;
+            font-style: italic;
+            color: var(--muted);
+            letter-spacing: 0.02em;
+        }
+
+        .diary-book-actions {
+            display: flex;
+            gap: 0.1rem;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .diary-book-entry:hover .diary-book-actions { opacity: 1; }
+
+        .diary-book-body {
+            margin: 0;
+            line-height: 1.75;
+            white-space: pre-wrap;
+            color: var(--ink);
+        }
+
+        .diary-book-empty {
+            text-align: center;
+            color: var(--muted);
+            font-style: italic;
+            padding: 1rem 0;
+        }

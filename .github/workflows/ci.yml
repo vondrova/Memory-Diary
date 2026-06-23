@@ -8,19 +8,29 @@ on:
 
 jobs:
   frontend:
-    name: Elm build
+    name: Elm build & test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Elm
-        run: |
-          curl -sL https://github.com/elm/compiler/releases/download/0.19.1/binary-for-linux-64-bit.gz \
-            | gunzip > /usr/local/bin/elm && chmod +x /usr/local/bin/elm
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Check Elm formatting
+        run: npm run format:check --prefix frontend
 
       - name: Build Elm frontend
-        working-directory: frontend
-        run: elm make src/Main.elm --output=/dev/null
+        run: npm run build
+
+      - name: Run Elm tests
+        run: npm run test:frontend
 
   backend:
     name: Haskell build & test
@@ -49,6 +59,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libpq-dev postgresql-client pkg-config
 
+      - name: Install fourmolu
+        run: |
+          curl -sL https://github.com/fourmolu/fourmolu/releases/download/v0.14.0.0/fourmolu-0.14.0.0-linux-x86_64 -o /usr/local/bin/fourmolu
+          chmod +x /usr/local/bin/fourmolu
+
+      - name: Check Haskell formatting
+        working-directory: backend
+        run: fourmolu --mode check src test app
+
       - name: Cache Stack global packages
         uses: actions/cache@v4
         with:
@@ -60,10 +79,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: backend/.stack-work
-          key: stack-work-${{ hashFiles('backend/stack.yaml', 'backend/package.yaml', 'backend/src/**', 'backend/test/**') }}
+          key: stack-work-${{ hashFiles('backend/stack.yaml', 'backend/package.yaml', 'backend/src/**/*.hs', 'backend/test/**/*.hs') }}
           restore-keys: stack-work-
 
-      - name: Build dependencies
+      - name: Build (dependencies only)
         working-directory: backend
         run: stack build --install-ghc --only-dependencies
 
@@ -74,3 +93,9 @@ jobs:
       - name: Run tests
         working-directory: backend
         run: stack test
+        env:
+          TEST_DATABASE_URL: postgresql://memory_diary:memory_diary@localhost:5432/memory_diary_test
+
+      - name: Generate Haddock documentation
+        working-directory: backend
+        run: stack haddock --no-haddock-deps

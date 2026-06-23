@@ -1,58 +1,100 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | HTTP handlers for the /api/plans endpoints.
+-- | HTTP handlers for the api plans endpoints
 module Handler.Plans
-  ( planServer
-  ) where
+  ( planServer,
+    listPlans,
+    createPlan,
+    getPlan,
+    updatePlan,
+    deletePlan,
+  )
+where
 
-import Api (PlanAPI)
-import Handler.Helpers (AppM, runDB)
+import qualified Api
+import Control.Monad.IO.Class (liftIO)
+import qualified Data.Text as T
+import Data.Time (getCurrentTime)
+import Database.Persist
+import Domain.Validation (cleanMaybeText, validatePlanInputFields)
+import Handler.Helpers
 import Models
 import Servant
 import Types
-import qualified Data.Text as T
 
-planServer :: ServerT PlanAPI AppM
-planServer = getPlans :<|> createPlan :<|> updatePlan :<|> deletePlan
+planServer :: ServerT Api.PlanApi AppM
+planServer = listPlans :<|> createPlan :<|> updatePlan :<|> deletePlan
 
--- | Return all plans sorted by category.
-getPlans :: AppM [CouplePlan]
-getPlans = map toCouplePlan <$> runDB (selectList [] [Asc CouplePlanDbCategory])
+-- | Return all plans sorted by category, completion status, then title
+listPlans :: AppM [PlanRow]
+listPlans = do
+  plans <- runDb (selectList [] [Asc CouplePlanDbCategory, Asc CouplePlanDbDone, Asc CouplePlanDbTitle])
+  pure (map planRowFromEntity plans)
 
--- | Create a new plan.
-createPlan :: CouplePlanInput -> AppM CouplePlan
+-- | Create a new plan and return the persisted row
+createPlan :: PlanInput -> AppM PlanRow
 createPlan input = do
-  let db = CouplePlanDb
-        { couplePlanDbCategory = T.pack (couplePlanInputCategory input)
-        , couplePlanDbTitle    = T.pack (couplePlanInputTitle input)
-        , couplePlanDbDetail   = T.pack <$> couplePlanInputDetail input
-        , couplePlanDbDone     = couplePlanInputDone input
-        }
-  key <- runDB $ insert db
-  return (toCouplePlan (Entity key db))
+  validatePlan input
+  planId <- runDb $ do
+    let plan = planDbFromInput input
+    _ <- insertUnique (PlanCategoryDb (couplePlanDbCategory plan))
+    insert plan
+  getPlan (toIntKey planId)
 
--- | Replace all fields of an existing plan.
-updatePlan :: Int -> CouplePlanInput -> AppM CouplePlan
-updatePlan planId input = do
-  let key = toSqlKey (fromIntegral planId) :: Key CouplePlanDb
-  existing <- runDB $ get key
+-- | Replace all fields of an existing plan
+updatePlan :: Int -> PlanInput -> AppM NoContent
+updatePlan rawId input = do
+  validatePlan input
+  let planId = fromIntKey rawId :: CouplePlanDbId
+  existing <- runDb (get planId)
   case existing of
-    Nothing -> throwError err404
-    Just _  -> do
-      let db = CouplePlanDb
-            { couplePlanDbCategory = T.pack (couplePlanInputCategory input)
-            , couplePlanDbTitle    = T.pack (couplePlanInputTitle input)
-            , couplePlanDbDetail   = T.pack <$> couplePlanInputDetail input
-            , couplePlanDbDone     = couplePlanInputDone input
-            }
-      runDB $ replace key db
-      return (toCouplePlan (Entity key db))
+    Nothing -> notFound
+    Just _ -> do
+      runDb $ do
+        let plan = planDbFromInput input
+        _ <- insertUnique (PlanCategoryDb (couplePlanDbCategory plan))
+        replace planId plan
+      pure NoContent
 
--- | Delete a plan by id.
+-- | Soft-delete a plan by moving it to the trash table
+--   The trash insert and the row delete run in one transaction
 deletePlan :: Int -> AppM NoContent
-deletePlan planId = do
-  let key = toSqlKey (fromIntegral planId) :: Key CouplePlanDb
-  existing <- runDB $ get key
-  case existing of
-    Nothing -> throwError err404
-    Just _  -> runDB (delete key) >> return NoContent
+deletePlan rawId = do
+  row <- getPlan rawId
+  runDb $ do
+    now <- liftIO getCurrentTime
+    insert_ (TrashItemDb "plan" (encodeToText (PlanInput (prCategory row) (prTitle row) (prDetail row) (prDone row))) now)
+    delete (fromIntKey rawId :: CouplePlanDbId)
+  pure NoContent
+
+-- | Fetch a single plan by numeric id
+getPlan :: Int -> AppM PlanRow
+getPlan rawId = do
+  mPlan <- runDb (getEntity (fromIntKey rawId :: CouplePlanDbId))
+  case mPlan of
+    Nothing -> notFound
+    Just plan -> pure (planRowFromEntity plan)
+
+-- | Validate a 'PlanInput'
+validatePlan :: PlanInput -> AppM ()
+validatePlan = validateInput . validatePlanInputFields
+
+-- | Map a 'PlanInput' to a database record, normalising a blank category to "other"
+planDbFromInput :: PlanInput -> CouplePlanDb
+planDbFromInput input =
+  let category = T.strip (piCategory input)
+   in CouplePlanDb
+        (if T.null category then "Other" else category)
+        (T.strip (piTitle input))
+        (cleanMaybeText (piDetail input))
+        (piDone input)
+
+-- | Convert a Persistent entity to the JSON row type
+planRowFromEntity :: Entity CouplePlanDb -> PlanRow
+planRowFromEntity (Entity planId plan) =
+  PlanRow
+    (toIntKey planId)
+    (couplePlanDbCategory plan)
+    (couplePlanDbTitle plan)
+    (couplePlanDbDetail plan)
+    (couplePlanDbDone plan)

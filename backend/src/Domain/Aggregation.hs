@@ -1,64 +1,69 @@
--- | Pure aggregation functions over memory data used by the stats endpoint.
+-- | Pure aggregation and statistics over memory rows
 module Domain.Aggregation
-  ( parseDT
-  , durMins
-  , topN
-  , activityBy
-  , computeStats
-  ) where
+  ( computeStats, -- make the whole Stats summary from a list of MemoryRow
+    memDurationMinutes,-- duration of one memory in minutes
+    countItems, -- occurences of each distinct value in a list
+    topByCount, -- top 10 items by count, descending
+  )
+where
 
-import Data.List (group, maximumBy, nub, sort, sortBy)
-import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Ord (Down (..), comparing)
-import Data.Time (UTCTime, diffUTCTime)
-import Data.Time.Format (defaultTimeLocale, parseTimeM)
+import Data.List (maximumBy, sortBy) -- for longest memory and sorting stats
+import qualified Data.Map.Strict as Map -- for counting occurrences of tags, locations, etc.
+import Data.Maybe (mapMaybe) -- for counting non-null locations
+import Data.Ord (Down (..), comparing) -- for sorting by count descending
+import qualified Data.Text as T -- for formatting dates in stats
+import Data.Time -- for computing durations and formatting dates in stats
+import Models (Stats (..)) 
 import Types
 
--- | Parse a datetime string with minute precision (@YYYY-MM-DDTHH:MM@).
-parseDT :: String -> Maybe UTCTime
-parseDT = parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M"
+-- | Aggregate a list of memory rows into a 'Stats' summary
+computeStats :: [MemoryRow] -> Stats
+computeStats rows =
+  let durations = map memDurationMinutes rows
+      total = sum durations
+      count = length rows
+      photos = sum (map (length . mrPhotos) rows)
+      places = length $ countItems $ mapMaybe mrLocation rows
+      avgMins = if count == 0 then 0 else total `div` count
+      longest = longestMemory rows
+   in Stats
+        { statsTotalMinutes = total,
+          statsMemoryCount = count,
+          statsPhotoCount = photos,
+          statsVisitedPlaces = places,
+          statsAverageMinutes = avgMins,
+          statsLongestTitle = fst <$> longest,
+          statsLongestMinutes = maybe 0 snd longest,
+          statsTopTags = topByCount (countItems (concatMap mrTags rows)),
+          statsTopLocations = topByCount (countItems (mapMaybe mrLocation rows)),
+          statsMonthlyActivity =
+            sortBy (comparing fst) $
+              countItems $
+                map (T.pack . formatTime defaultTimeLocale "%Y-%m" . mrTimeFrom) rows,
+          statsDailyActivity =
+            sortBy (comparing fst) $
+              countItems $
+                map (T.pack . formatTime defaultTimeLocale "%Y-%m-%d" . mrTimeFrom) rows
+        }
 
--- | Duration between two datetime strings in whole minutes.
---   Returns 0 on parse failure or when @to@ is before @from@.
-durMins :: String -> String -> Int
-durMins from to = fromMaybe 0 $ do
-  t1 <- parseDT from
-  t2 <- parseDT to
-  return $ max 0 $ round (diffUTCTime t2 t1 / 60)
+-- | Duration of a memory in whole minutes
+memDurationMinutes :: MemoryRow -> Int
+memDurationMinutes mem =
+  round (diffUTCTime (mrTimeTo mem) (mrTimeFrom mem) / 60 :: NominalDiffTime)
 
--- | Return the @n@ most frequent elements together with their counts, highest first.
-topN :: Int -> [String] -> [(String, Int)]
-topN n xs =
-  take n
-  $ sortBy (comparing (Down . snd))
-  $ map (\g -> (head g, length g))
-  $ group (sort xs)
+-- | Return the title and duration (minutes) of the longest memory, or Nothing
+longestMemory :: [MemoryRow] -> Maybe (T.Text, Int)
+longestMemory [] = Nothing
+longestMemory rows =
+  let pairs = map (\r -> (mrTitle r, memDurationMinutes r)) rows
+   in Just (maximumBy (comparing snd) pairs)
 
--- | Group memories by the result of @f@ and count occurrences per group, sorted ascending by key.
-activityBy :: (Memory -> String) -> [Memory] -> [(String, Int)]
-activityBy f mems =
-  sortBy (comparing fst)
-  $ map (\g -> (head g, length g))
-  $ group (sort (map f mems))
+-- | Count occurrences of each distinct value, returning an unsorted association list
+countItems :: (Ord a) => [a] -> [(a, Int)]
+countItems =
+  Map.toList . foldl (\m x -> Map.insertWith (+) x 1 m) Map.empty
 
--- | Compute all aggregate statistics for a list of memories in a single pass.
-computeStats :: [Memory] -> Stats
-computeStats mems = Stats
-  { statsTotalMinutes    = totalMins
-  , statsMemoryCount     = length mems
-  , statsPhotoCount      = sum (map (length . memoryPhotos) mems)
-  , statsVisitedPlaces   = length (nub (mapMaybe memoryLocation mems))
-  , statsAverageMinutes  = if null mems then 0 else totalMins `div` length mems
-  , statsLongestTitle    = memoryTitle <$> safeLongest
-  , statsLongestMinutes  = maybe 0 (\m -> durMins (memoryTimeFrom m) (memoryTimeTo m)) safeLongest
-  , statsTopTags         = topN 10 (concatMap memoryTags mems)
-  , statsTopLocations    = topN 10 (mapMaybe memoryLocation mems)
-  , statsMonthlyActivity = activityBy (take 7 . memoryTimeFrom) mems
-  , statsDailyActivity   = activityBy (take 10 . memoryTimeFrom) mems
-  }
-  where
-    durations   = map (\m -> durMins (memoryTimeFrom m) (memoryTimeTo m)) mems
-    totalMins   = sum durations
-    safeLongest
-      | null mems = Nothing
-      | otherwise = Just $ fst $ maximumBy (comparing snd) (zip mems durations)
+-- | Return the top 10 items by count, descending
+topByCount :: [(a, Int)] -> [(a, Int)]
+topByCount =
+  take 10 . sortBy (comparing (Down . snd))

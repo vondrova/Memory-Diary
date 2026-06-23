@@ -1,40 +1,59 @@
--- | Date-recurrence helpers for important days and anniversaries.
+{-# LANGUAGE OverloadedStrings #-}
+
+-- | Pure date arithmetic for recurring annual and monthly events
 module Domain.Recurrence
-  ( parseDay
-  , formatDay
-  , computeNextOccurrence
-  , monthDay
-  ) where
+  ( nextAnnualOccurrence,
+    nextMonthiversary,
+    ordinalYears, -- number of complete years between start and occurrence, used for "Xth anniversary" labels
+    ordinalMonths, -- number of complete months between start and occurrence, used for "Xth monthiversary" labels
+    diffMonths, -- signed difference in whole months between two dates, used internally by ordinalMonths and nextMonthiversary  
+  )
+where
 
-import Data.Time (formatTime)
-import Data.Time.Calendar (Day, diffDays, fromGregorian, toGregorian)
-import Data.Time.Format (defaultTimeLocale, parseTimeM)
+import Data.Time
+  ( Day,
+    UTCTime (..),
+    addGregorianMonthsClip,
+    fromGregorian,
+    toGregorian,
+    utctDay,
+  )
 
--- | Parse an ISO 8601 date string (@YYYY-MM-DD@) into a 'Day'.
-parseDay :: String -> Maybe Day
-parseDay = parseTimeM True defaultTimeLocale "%Y-%m-%d"
+-- | Return the nearest future calendar date on which the annual anniversary falls
+nextAnnualOccurrence :: UTCTime -> UTCTime -> UTCTime
+nextAnnualOccurrence now start =
+  let today = utctDay now -- without time component
+      (_, month, day) = toGregorian (utctDay start)
+      (year, _, _) = toGregorian today 
+      thisYear = fromGregorian year month day 
+      nextDay = if thisYear >= today then thisYear else fromGregorian (year + 1) month day -- if this year's occurrence has passed, use next year
+   in UTCTime nextDay 0 -- without time component
 
--- | Format a 'Day' as an ISO 8601 date string (@YYYY-MM-DD@).
-formatDay :: Day -> String
-formatDay = formatTime defaultTimeLocale "%Y-%m-%d"
+-- | Return the nearest future calendar date on which the monthly anniversary falls
+nextMonthiversary :: UTCTime -> UTCTime -> UTCTime
+nextMonthiversary now start =
+  let today = utctDay now
+      startDay = utctDay start
+      elapsedMonths = max 0 (diffMonths startDay today) -- how many whole months have passed since the start date
+      candidate = addGregorianMonthsClip elapsedMonths startDay -- the most recent monthiversary (could be in the past if the day of month doesn't exist in this month - help from AI here)
+      nextDay = if candidate >= today then candidate else addGregorianMonthsClip (elapsedMonths + 1) startDay -- if the most recent monthiversary has passed, use the next one
+   in UTCTime nextDay 0
 
--- | Given today's date and a stored date string, return
---   @(nextOccurrenceDate, daysUntil, month, day)@.
---   If the anniversary has already passed this year, the next occurrence is next year.
-computeNextOccurrence :: Day -> String -> (String, Int, Int, Int)
-computeNextOccurrence today dateStr =
-  case parseDay dateStr of
-    Nothing -> (dateStr, 0, 0, 0)
-    Just d  ->
-      let (_, m, dd)   = toGregorian d
-          (yr, _, _)   = toGregorian today
-          thisYearDate = fromGregorian yr m dd
-          nextDate     = if today <= thisYearDate then thisYearDate
-                         else fromGregorian (yr + 1) m dd
-          days         = fromIntegral (diffDays nextDate today)
-      in (formatDay nextDate, days, fromIntegral m, fromIntegral dd)
+-- | Number of complete years between start and occurrence
+ordinalYears :: UTCTime -> UTCTime -> Integer
+ordinalYears start occurrence =
+  let (startYear, _, _) = toGregorian (utctDay start)
+      (occYear, _, _) = toGregorian (utctDay occurrence)
+   in max 0 (occYear - startYear)
 
--- | Extract the @MM-DD@ portion of an ISO date or datetime string,
---   used to match anniversaries regardless of the year.
-monthDay :: String -> String
-monthDay s = take 5 (drop 5 s)
+-- | Number of complete months between start and occurrence
+ordinalMonths :: UTCTime -> UTCTime -> Integer
+ordinalMonths start occurrence =
+  max 0 (diffMonths (utctDay start) (utctDay occurrence))
+
+-- | Signed difference in whole months between two days
+diffMonths :: Day -> Day -> Integer
+diffMonths start end =
+  let (sy, sm, _) = toGregorian start
+      (ey, em, _) = toGregorian end
+   in (ey - sy) * 12 + toInteger em - toInteger sm

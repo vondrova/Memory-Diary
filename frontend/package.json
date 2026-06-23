@@ -1,0 +1,18 @@
+{
+  "name": "memory-diary-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "ELM_HOME=.elm-home elm make src/Main.elm --output=main.js",
+    "build:clean": "rm -rf elm-stuff main.js .elm-home && ELM_HOME=.elm-home elm make src/Main.elm --output=main.js",
+    "format": "elm-format --yes src/ tests/",
+    "format:check": "elm-format --validate src/ tests/",
+    "test:frontend": "elm-test",
+    "start": "cd .. && npm run start"
+  },
+  "devDependencies": {
+    "elm": "^0.19.1-6",
+    "elm-format": "^0.8.8",
+    "elm-test": "^0.19.1-revision12"
+  }
+}
