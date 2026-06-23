@@ -1,3 +1,8 @@
+{- JSON decoders and encoders for all API types.
+   Field names match the backend JSON produced by aesonOpts:
+   record prefixes are stripped and the first character is lowercased,
+   so memoryTitle becomes "title", inputTimeFrom becomes "timeFrom", etc.
+-}
 module Api.Codec exposing
     ( memoryDecoder
     , importantDayDecoder

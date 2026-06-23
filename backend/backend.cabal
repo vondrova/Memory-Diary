@@ -25,7 +25,26 @@ source-repository head
 
 library
   exposed-modules:
+      Api
+      Domain.Aggregation
+      Domain.Filter
+      Domain.Recurrence
+      Domain.Validation
+      Handler.Diary
+      Handler.Geocode
+      Handler.Helpers
+      Handler.ImportantDays
+      Handler.Memories
+      Handler.Notes
+      Handler.Photos
+      Handler.Plans
+      Handler.Relationship
+      Handler.Stats
+      Handler.Tags
+      Handler.Trash
       Lib
+      Models
+      Types
   other-modules:
       Paths_backend
   autogen-modules:

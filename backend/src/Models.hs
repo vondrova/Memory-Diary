@@ -13,6 +13,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+-- | Database schema (Persistent entities) and functions that convert
+--   database rows into domain types defined in "Types".
+--   Tags and photos are stored as comma-separated text in a single column;
+--   'splitComma' / 'joinComma' handle the serialisation boundary.
 module Models
   ( module Models
   , module Database.Persist
@@ -75,14 +79,18 @@ DiaryEntryDb
   deriving Show
 |]
 
+-- | Split a comma-separated 'Text' column into a list of 'String' values.
+--   Returns an empty list for empty text rather than a singleton @[""]@.
 splitComma :: Text -> [String]
 splitComma t
   | T.null t  = []
   | otherwise = map T.unpack (T.splitOn "," t)
 
+-- | Join a list of strings into a comma-separated 'Text' column value.
 joinComma :: [String] -> Text
 joinComma = T.intercalate "," . map T.pack
 
+-- | Convert a Persistent database row to the 'Memory' domain type.
 toMemory :: Entity MemoryDb -> Memory
 toMemory (Entity key db) = Memory
   { memoryId          = fromIntegral (fromSqlKey key)

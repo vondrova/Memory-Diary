@@ -8,6 +8,7 @@ frontend/.elm-home/
 frontend/node_modules/
 
 # Haskell / Stack
+.stack-work/
 backend/.stack-work/
 backend/dist-newstyle/
 

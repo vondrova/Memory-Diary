@@ -1,6 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | Domain types shared across the whole application.
+--   Input types (suffix @Input@) are decoded from incoming JSON request bodies.
+--   Response types are encoded to JSON and returned from API handlers.
+--   All JSON instances use 'aesonOpts' to strip the Haskell record-name prefix,
+--   so @memoryId@ becomes @\"id\"@, @inputTitle@ becomes @\"title\"@, etc.
 module Types
   ( Memory (..)
   , MemoryInput (..)
@@ -29,6 +34,8 @@ import Data.Char (toLower)
 import Data.List (stripPrefix)
 import GHC.Generics (Generic)
 
+-- | Strip a known record-name prefix and lowercase the first remaining character,
+--   turning e.g. @memoryTitle@ into @\"title\"@ in the serialised JSON.
 aesonOpts :: String -> Options
 aesonOpts prefix = defaultOptions
   { fieldLabelModifier = \s -> case stripPrefix prefix s of
@@ -36,6 +43,7 @@ aesonOpts prefix = defaultOptions
       _             -> s
   }
 
+-- | A single memory entry as stored in the database and returned by the API.
 data Memory = Memory
   { memoryId          :: Int
   , memoryTitle       :: String
@@ -63,6 +71,9 @@ data MemoryInput = MemoryInput
 instance FromJSON MemoryInput where parseJSON = genericParseJSON (aesonOpts "input")
 instance ToJSON   MemoryInput where toJSON    = genericToJSON   (aesonOpts "input")
 
+-- | An important recurring date (birthday, anniversary, …).
+--   The computed fields @nextOccurrence@, @daysUntil@, @month@, @day@
+--   are derived at request time in 'Models.toImportantDay'.
 data ImportantDay = ImportantDay
   { importantDayId             :: Maybe Int
   , importantDayTitle          :: String
@@ -123,6 +134,8 @@ data OnThisDay = OnThisDay
 instance FromJSON OnThisDay where parseJSON = genericParseJSON (aesonOpts "onThisDay")
 instance ToJSON   OnThisDay where toJSON    = genericToJSON   (aesonOpts "onThisDay")
 
+-- | Aggregated statistics computed on-the-fly over all memories by 'Domain.Aggregation.computeStats'.
+--   Not persisted in the database.
 data Stats = Stats
   { statsTotalMinutes    :: Int
   , statsMemoryCount     :: Int

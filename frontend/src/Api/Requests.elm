@@ -1,3 +1,7 @@
+{- Parameterised HTTP request helpers.
+   Every function takes a (Result Http.Error a -> msg) callback
+   so this module can be imported from Main without a circular dependency.
+-}
 module Api.Requests exposing
     ( fetchMemories
     , fetchImportantDays
