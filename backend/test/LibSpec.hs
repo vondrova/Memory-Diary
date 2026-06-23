@@ -3,7 +3,8 @@ module LibSpec (spec) where
 import Data.Text (pack)
 import Data.Time.Calendar (fromGregorian)
 import Test.Hspec
-import Lib (computeNextOccurrence, durMins, joinComma, splitComma, topN)
+import Data.Time.Calendar (diffDays)
+import Lib (computeNextOccurrence, durMins, joinComma, parseDay, splitComma, topN)
 
 spec :: Spec
 spec = do
@@ -70,3 +71,23 @@ spec = do
       days `shouldBe` 0
       m    `shouldBe` 0
       d    `shouldBe` 0
+
+  describe "parseDay" $ do
+    it "parses a valid ISO date" $
+      parseDay "2024-06-15" `shouldBe` Just (fromGregorian 2024 6 15)
+
+    it "returns Nothing for an invalid date string" $
+      parseDay "not-a-date" `shouldBe` Nothing
+
+    it "returns Nothing for wrong date format" $
+      parseDay "15-06-2024" `shouldBe` Nothing
+
+  describe "days together" $ do
+    it "computes 365 days between two dates one year apart" $ do
+      let start = fromGregorian 2023 6 15
+      let end   = fromGregorian 2024 6 15
+      diffDays end start `shouldBe` 366
+
+    it "computes 0 days for same date" $ do
+      let d = fromGregorian 2024 1 1
+      diffDays d d `shouldBe` 0

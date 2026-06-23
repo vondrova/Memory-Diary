@@ -15,7 +15,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Lib (startApp, durMins, topN, splitComma, joinComma, computeNextOccurrence) where
+module Lib (startApp, durMins, topN, splitComma, joinComma, computeNextOccurrence, parseDay) where
 
 import Control.Monad (zipWithM)
 import Control.Monad.IO.Class (liftIO)
@@ -60,6 +60,13 @@ ImportantDayDb
   date  Text
   note  Text Maybe
   kind  Text
+  deriving Show
+
+RelationshipDb
+  partner1  Text
+  partner2  Text
+  startDate Text
+  note      Text Maybe
   deriving Show
 |]
 
@@ -129,7 +136,7 @@ type MemoryAPI =
 
 type PhotoAPI = "api" :> "photos" :> MultipartForm Tmp (MultipartData Tmp) :> Post '[JSON] [String]
 
-type FullAPI = MemoryAPI :<|> ImportantDayAPI :<|> StatsAPI :<|> PhotoAPI :<|> "photos" :> Raw
+type FullAPI = MemoryAPI :<|> ImportantDayAPI :<|> RelationshipAPI :<|> StatsAPI :<|> PhotoAPI :<|> "photos" :> Raw
 
 memoryServer :: ServerT MemoryAPI AppM
 memoryServer =
@@ -325,6 +332,79 @@ deleteImportantDay dayId = do
       runDB $ delete key
       return NoContent
 
+data Relationship = Relationship
+  { relationshipId              :: Maybe Int
+  , relationshipPartner1        :: String
+  , relationshipPartner2        :: String
+  , relationshipStartDate       :: String
+  , relationshipNote            :: Maybe String
+  , relationshipDaysTogether    :: Int
+  , relationshipYearsTogether   :: Int
+  , relationshipNextAnniversary :: String
+  , relationshipDaysUntilAnniv  :: Int
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON Relationship
+instance ToJSON Relationship
+
+data RelationshipInput = RelationshipInput
+  { relationshipInputPartner1  :: String
+  , relationshipInputPartner2  :: String
+  , relationshipInputStartDate :: String
+  , relationshipInputNote      :: Maybe String
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON RelationshipInput
+instance ToJSON RelationshipInput
+
+toRelationship :: Day -> Entity RelationshipDb -> Relationship
+toRelationship today (Entity key db) =
+  let startStr = T.unpack (relationshipDbStartDate db)
+      daysTog  = maybe 0 (fromIntegral . diffDays today) (parseDay startStr)
+      yearsTog = daysTog `div` 365
+      (nextAnn, daysUntilAnn, _, _) = computeNextOccurrence today startStr
+  in Relationship
+    { relationshipId              = Just (fromIntegral (fromSqlKey key))
+    , relationshipPartner1        = T.unpack (relationshipDbPartner1 db)
+    , relationshipPartner2        = T.unpack (relationshipDbPartner2 db)
+    , relationshipStartDate       = startStr
+    , relationshipNote            = T.unpack <$> relationshipDbNote db
+    , relationshipDaysTogether    = daysTog
+    , relationshipYearsTogether   = yearsTog
+    , relationshipNextAnniversary = nextAnn
+    , relationshipDaysUntilAnniv  = daysUntilAnn
+    }
+
+type RelationshipAPI =
+       "api" :> "relationship" :> Get '[JSON] (Maybe Relationship)
+  :<|> "api" :> "relationship" :> ReqBody '[JSON] RelationshipInput :> Put '[JSON] Relationship
+
+relationshipServer :: ServerT RelationshipAPI AppM
+relationshipServer = getRelationship :<|> upsertRelationship
+
+getRelationship :: AppM (Maybe Relationship)
+getRelationship = do
+  today    <- liftIO $ utctDay <$> getCurrentTime
+  entities <- runDB $ selectList [] [LimitTo 1]
+  return $ case entities of
+    []      -> Nothing
+    (e : _) -> Just (toRelationship today e)
+
+upsertRelationship :: RelationshipInput -> AppM Relationship
+upsertRelationship input = do
+  today    <- liftIO $ utctDay <$> getCurrentTime
+  entities <- runDB $ selectList [] [LimitTo 1]
+  let db = RelationshipDb
+        { relationshipDbPartner1  = T.pack (relationshipInputPartner1 input)
+        , relationshipDbPartner2  = T.pack (relationshipInputPartner2 input)
+        , relationshipDbStartDate = T.pack (relationshipInputStartDate input)
+        , relationshipDbNote      = T.pack <$> relationshipInputNote input
+        }
+  key <- case entities of
+    []              -> runDB $ insert db
+    (Entity k _ : _) -> runDB (replace k db) >> return k
+  return (toRelationship today (Entity key db))
+
 data Stats = Stats
   { statsTotalMinutes    :: Int
   , statsMemoryCount     :: Int
@@ -412,9 +492,10 @@ uploadPhotos multipartData = liftIO $ do
 app :: ConnectionPool -> Application
 app pool =
   serve (Proxy :: Proxy FullAPI) $
-    hoistServer (Proxy :: Proxy MemoryAPI)         (`runReaderT` pool) memoryServer
-    :<|> hoistServer (Proxy :: Proxy ImportantDayAPI) (`runReaderT` pool) importantDayServer
-    :<|> hoistServer (Proxy :: Proxy StatsAPI)     (`runReaderT` pool) getStats
+    hoistServer (Proxy :: Proxy MemoryAPI)          (`runReaderT` pool) memoryServer
+    :<|> hoistServer (Proxy :: Proxy ImportantDayAPI)  (`runReaderT` pool) importantDayServer
+    :<|> hoistServer (Proxy :: Proxy RelationshipAPI)  (`runReaderT` pool) relationshipServer
+    :<|> hoistServer (Proxy :: Proxy StatsAPI)      (`runReaderT` pool) getStats
     :<|> uploadPhotos
     :<|> Tagged (staticApp (defaultWebAppSettings photosDir))
 
