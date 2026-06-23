@@ -41,6 +41,7 @@ listTrash = do
   pure (map trashRowFromEntity items)
 
 -- | Restore a trashed item by decoding its payload and re-creating it, then deleting the trash entry
+restoreTrashItem :: Int -> AppM NoContent
 restoreTrashItem rawId = do
   let trashId = fromIntKey rawId :: TrashItemDbId
   mItem <- runDb (get trashId)

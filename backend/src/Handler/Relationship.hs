@@ -21,7 +21,6 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text)
 import Data.Time
 import Database.Persist
-import Database.Persist.Sql (SqlPersistT)
 import Domain.Recurrence
   ( nextAnnualOccurrence,
     nextMonthiversary,

@@ -15,10 +15,7 @@
 -- | Database schema for Memory Diary.
 --   All tables are defined using Persistent's Template Haskell DSL (`persistLowerCase`).
 --   'Stats' is not stored in the database, it is computed ad-hoc by aggregating memory data in 'Handler.Stats' / 'Domain.Aggregation' and returned via the API
-module Models
-  ( module Models,
-  )
-where
+module Models where
 
 import Data.Aeson (ToJSON (..), object, (.=))
 import Data.Text (Text)

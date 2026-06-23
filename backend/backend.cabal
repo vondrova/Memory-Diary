@@ -44,6 +44,7 @@ library
       Handler.Stats
       Handler.Tags
       Handler.Trash
+      Lib
       Models
       Types
   other-modules:

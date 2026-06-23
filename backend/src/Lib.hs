@@ -2,75 +2,120 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 
--- | Application entry point.
---   All API types live in "Api", all handlers in "Handler.*".
---   This module wires them together and re-exports names used by the test suite.
+-- | Library entry point for the Memory Diary backend.
 module Lib
   ( startApp,
-    Memory (..),
-    Stats (..),
-    durMins,
-    topN,
-    splitComma,
-    joinComma,
-    computeNextOccurrence,
-    parseDay,
-    monthDay,
-    computeStats,
   )
 where
 
-import Api
+import qualified Api
 import Control.Monad.Logger (runNoLoggingT)
 import Control.Monad.Reader (runReaderT)
 import Data.ByteString.Char8 (pack)
 import Data.Maybe (fromMaybe)
 import Database.Persist.Postgresql (ConnectionPool, createPostgresqlPool, runMigration)
 import Database.Persist.Sql (runSqlPool)
-import Domain.Aggregation (computeStats, durMins, topN)
-import Domain.Recurrence (computeNextOccurrence, monthDay, parseDay)
 import Handler.Diary (diaryServer)
-import Handler.Geocode (geocodeHandler)
+import Handler.Geocode (geocodeServer)
 import Handler.ImportantDays (importantDayServer)
 import Handler.Memories (memoryServer)
 import Handler.Notes (noteServer)
-import Handler.Photos (photosApp, uploadPhotos)
+import Handler.Photos (initPhotosDir, photosApp, uploadPhotos)
 import Handler.Plans (planServer)
-import Handler.Relationship (getOnThisDay, relationshipServer)
-import Handler.Stats (getStats)
-import Models (joinComma, migrateAll, splitComma)
+import Handler.Relationship (profileServer, relationshipServer)
+import Handler.Stats (statsServer)
+import Handler.Tags (locationServer, planCategoryServer, tagServer)
+import Handler.Trash (trashServer)
+import Models (migrateAll, syncCatalogValues)
+import Network.HTTP.Types.Header (ResponseHeaders, hCacheControl, hExpires)
+import Network.Wai (mapResponseHeaders)
+import qualified Network.Wai as Wai
 import Network.Wai.Application.Static (defaultWebAppSettings, staticApp)
 import Network.Wai.Handler.Warp (run)
 import Servant
-import System.Directory (createDirectoryIfMissing)
 import System.Environment (lookupEnv)
-import Types
+import Text.Read (readMaybe)
+import WaiAppStatic.Types (StaticSettings (..), unsafeToPiece)
 
--- | Build the Servant WAI application, wiring each sub-API to its handler server.
-app :: String -> String -> ConnectionPool -> Application
+type FullApi =
+  Api.MemoryApi
+    :<|> Api.ImportantDayApi
+    :<|> Api.NoteApi
+    :<|> Api.PlanApi
+    :<|> Api.StatsApi
+    :<|> Api.TrashApi
+    :<|> Api.PhotoApi
+    :<|> Api.GeocodeApi
+    :<|> Api.TagApi
+    :<|> Api.LocationApi
+    :<|> Api.PlanCategoryApi
+    :<|> Api.RelationshipApi
+    :<|> Api.ProfileApi
+    :<|> Api.DiaryApi
+    :<|> "photos" :> Raw
+    :<|> Raw
+
+app :: String -> String -> ConnectionPool -> Wai.Application
 app staticPath photosPath pool =
-  serve (Proxy :: Proxy FullAPI) $
-    hoistServer (Proxy :: Proxy MemoryAPI) (`runReaderT` pool) memoryServer
-      :<|> hoistServer (Proxy :: Proxy ImportantDayAPI) (`runReaderT` pool) importantDayServer
-      :<|> hoistServer (Proxy :: Proxy RelationshipAPI) (`runReaderT` pool) relationshipServer
-      :<|> hoistServer (Proxy :: Proxy OnThisDayAPI) (`runReaderT` pool) getOnThisDay
-      :<|> hoistServer (Proxy :: Proxy NoteAPI) (`runReaderT` pool) noteServer
-      :<|> hoistServer (Proxy :: Proxy PlanAPI) (`runReaderT` pool) planServer
-      :<|> hoistServer (Proxy :: Proxy DiaryAPI) (`runReaderT` pool) diaryServer
-      :<|> hoistServer (Proxy :: Proxy StatsAPI) (`runReaderT` pool) getStats
-      :<|> hoistServer (Proxy :: Proxy GeoAPI) (`runReaderT` pool) geocodeHandler
-      :<|> uploadPhotos photosPath
-      :<|> Tagged (photosApp photosPath)
-      :<|> Tagged (staticApp (defaultWebAppSettings staticPath))
+  serve
+    (Proxy :: Proxy FullApi)
+    ( hoistServer Api.memoryApi (`runReaderT` pool) memoryServer
+        :<|> hoistServer Api.importantDayApi (`runReaderT` pool) importantDayServer
+        :<|> hoistServer Api.noteApi (`runReaderT` pool) noteServer
+        :<|> hoistServer Api.planApi (`runReaderT` pool) planServer
+        :<|> hoistServer Api.statsApi (`runReaderT` pool) statsServer
+        :<|> hoistServer Api.trashApi (`runReaderT` pool) trashServer
+        :<|> uploadPhotos photosPath
+        :<|> hoistServer Api.geocodeApi (`runReaderT` pool) geocodeServer
+        :<|> hoistServer Api.tagApi (`runReaderT` pool) tagServer
+        :<|> hoistServer Api.locationApi (`runReaderT` pool) locationServer
+        :<|> hoistServer Api.planCategoryApi (`runReaderT` pool) planCategoryServer
+        :<|> hoistServer Api.relationshipApi (`runReaderT` pool) relationshipServer
+        :<|> hoistServer Api.profileApi (`runReaderT` pool) profileServer
+        :<|> hoistServer Api.diaryApi (`runReaderT` pool) diaryServer
+        :<|> Tagged (noCache (photosApp photosPath))
+        :<|> Tagged (noCache (staticApp settings))
+    )
+  where
+    settings =
+      (defaultWebAppSettings staticPath)
+        { ssIndices = [unsafeToPiece "index.html"]
+        }
 
--- | Start the application: read environment, run migrations, start Warp.
+-- | Read runtime configuration, prepare the database and start the HTTP server.
 startApp :: IO ()
 startApp = do
-  dbUrl <- fromMaybe "postgresql://memory_diary:memory_diary@localhost:5432/memory_diary" <$> lookupEnv "DATABASE_URL"
+  databaseUrl <- fromMaybe "postgresql://memory_diary:memory_diary@localhost:5432/memory_diary" <$> lookupEnv "DATABASE_URL"
   staticPath <- fromMaybe "../frontend" <$> lookupEnv "STATIC_PATH"
   photosPath <- fromMaybe "../photos" <$> lookupEnv "PHOTOS_PATH"
-  pool <- runNoLoggingT $ createPostgresqlPool (pack dbUrl) 10
+  port <- maybe 3000 (fromMaybe 3000 . readMaybe) <$> lookupEnv "PORT"
+  initPhotosDir photosPath
+  pool <- runNoLoggingT $ createPostgresqlPool (pack databaseUrl) 10
   runSqlPool (runMigration migrateAll) pool
-  createDirectoryIfMissing True photosPath
-  putStrLn "Memory Diary starting on port 3000..."
-  run 3000 (app staticPath photosPath pool)
+  runSqlPool syncCatalogValues pool
+  putStrLn $
+    "Server starting on http://localhost:"
+      <> show port
+      <> " (static: "
+      <> staticPath
+      <> ", photos: "
+      <> photosPath
+      <> ")"
+  run port (app staticPath photosPath pool)
+
+noCache :: Wai.Application -> Wai.Application
+noCache waiApp request sendResponse =
+  waiApp request $ sendResponse . mapResponseHeaders replaceCacheHeaders
+
+replaceCacheHeaders :: ResponseHeaders -> ResponseHeaders
+replaceCacheHeaders headers =
+  let filtered =
+        filter
+          ( \(name, _) ->
+              name /= hCacheControl && name /= hExpires && name /= "Pragma"
+          )
+          headers
+   in ("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        : ("Pragma", "no-cache")
+        : ("Expires", "0")
+        : filtered
