@@ -105,7 +105,13 @@ runDB :: ReaderT SqlBackend IO a -> AppM a
 runDB action = ask >>= liftIO . runSqlPool action
 
 type MemoryAPI =
-       "api" :> "memories" :> Get '[JSON] [Memory]
+       "api" :> "memories"
+         :> QueryParam "q"        Text
+         :> QueryParam "tag"      Text
+         :> QueryParam "location" Text
+         :> QueryParam "from"     Text
+         :> QueryParam "to"       Text
+         :> Get '[JSON] [Memory]
   :<|> "api" :> "memories" :> ReqBody '[JSON] MemoryInput :> Post '[JSON] Memory
   :<|> "api" :> "memories" :> Capture "id" Int :> ReqBody '[JSON] MemoryInput :> Put '[JSON] Memory
   :<|> "api" :> "memories" :> Capture "id" Int :> Delete '[JSON] NoContent
@@ -121,10 +127,32 @@ memoryServer =
   :<|> updateMemory
   :<|> deleteMemory
 
-getMemories :: AppM [Memory]
-getMemories = do
+getMemories :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> AppM [Memory]
+getMemories mq mTag mLoc mFrom mTo = do
   entities <- runDB $ selectList [] [Desc MemoryDbId]
-  return (map toMemory entities)
+  return $ filter (matchesFilter mq mTag mLoc mFrom mTo) (map toMemory entities)
+
+matchesFilter :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Memory -> Bool
+matchesFilter mq mTag mLoc mFrom mTo mem =
+  matchQ mq && matchTag mTag && matchLoc mLoc && matchFrom mFrom && matchTo mTo
+  where
+    matchQ Nothing  = True
+    matchQ (Just q) =
+      let ql = T.toLower q
+      in T.isInfixOf ql (T.toLower (T.pack (memoryTitle mem)))
+         || maybe False (T.isInfixOf ql . T.toLower . T.pack) (memoryDescription mem)
+
+    matchTag Nothing    = True
+    matchTag (Just tag) = T.unpack tag `elem` memoryTags mem
+
+    matchLoc Nothing    = True
+    matchLoc (Just loc) = maybe False (T.isInfixOf (T.toLower loc) . T.toLower . T.pack) (memoryLocation mem)
+
+    matchFrom Nothing     = True
+    matchFrom (Just from) = T.unpack from <= memoryTimeFrom mem
+
+    matchTo Nothing   = True
+    matchTo (Just to) = memoryTimeTo mem <= T.unpack to
 
 createMemory :: MemoryInput -> AppM Memory
 createMemory input = do
