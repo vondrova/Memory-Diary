@@ -5,11 +5,12 @@ module UpdateWorkflowTest exposing (suite)
 Covers the two functions that convert `Http.Error` values into user-visible
 messages stored in `model.infoDialog`:
 
-  - `mutationFailure`     — maps each `Http.Error` variant to a fixed Czech
-                            message (400 → "server rejected", network → "no
-                            connection", etc.)
+  - `mutationFailure` — maps each `Http.Error` variant to a fixed Czech
+    message (400 → "server rejected", network → "no
+    connection", etc.)
   - `withMutationFailure` — convenience wrapper that applies `mutationFailure`
-                            inside a `Result` and stores it on the model
+    inside a `Result` and stores it on the model
+
 -}
 
 import Expect

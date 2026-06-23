@@ -3,20 +3,22 @@ module HelpersTest exposing (..)
 {-| Tests for pure helper functions in `Helpers` and `DateUtils`
 
 Covered areas:
+
   - `formatDate` / `formatDuration` — date and duration display formatting
-  - `dayKey`                        — zero-padded "MM-DD" key used for
-                                      birthday and anniversary lookups
-  - Photo filename safety            — `safePhotoName` rejects path-like and
-                                       URL-like filenames
-  - Form validation helpers          — `importantDayFormValid`, `noteFormValid`,
-                                       `planFormValid` with various invalid inputs
+  - `dayKey` — zero-padded "MM-DD" key used for
+    birthday and anniversary lookups
+  - Photo filename safety — `safePhotoName` rejects path-like and
+    URL-like filenames
+  - Form validation helpers — `importantDayFormValid`, `noteFormValid`,
+    `planFormValid` with various invalid inputs
+
 -}
 
-import Utils.DateUtils exposing (dayKey, daysInMonth)
 import Expect
-import Utils.Helpers exposing (..)
 import Test exposing (Test, describe, test)
 import Types exposing (Language(..), Memory)
+import Utils.DateUtils exposing (dayKey, daysInMonth)
+import Utils.Helpers exposing (..)
 
 
 suite : Test

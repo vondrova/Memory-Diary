@@ -12,15 +12,20 @@ import Types exposing (Language(..), Page(..))
 import Url exposing (Url)
 
 
--- URL GENERATION -----------------------------------------------
 
+-- URL GENERATION -----------------------------------------------
 -- | Default English URL for a page; used where language context is unavailable
+
+
 pageUrl : Page -> String
 pageUrl page =
     pageUrlFor English page
 
 
+
 -- | Hash-fragment URL for a page in the given language
+
+
 pageUrlFor : Language -> Page -> String
 pageUrlFor lang page =
     case page of
@@ -79,9 +84,11 @@ pageUrlFor lang page =
                     "#/denik"
 
 
--- URL PARSING -----------------------------------------------
 
+-- URL PARSING -----------------------------------------------
 -- | Map a URL fragment to a Page, unknown fragments fall back to HomePage
+
+
 pageFromUrl : Url -> Page
 pageFromUrl url =
     case Maybe.withDefault "/" url.fragment of
@@ -179,7 +186,10 @@ pageFromUrl url =
             HomePage
 
 
+
 -- | Detect language from a URL fragment, returns Nothing for language-neutral pages (home, timeline)
+
+
 languageFromUrl : Url -> Maybe Language
 languageFromUrl url =
     case Maybe.withDefault "/" url.fragment of

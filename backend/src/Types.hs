@@ -3,7 +3,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Types used across the application (Input = API request bodies, Row = API response rows)
-
 module Types
   ( MemoryInput (..),
     MemoryRow (..),

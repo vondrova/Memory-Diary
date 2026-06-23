@@ -6,9 +6,8 @@
 --   All entries for both partners are returned by a single GET endpoint
 --   The Elm frontend filters by owner client-side
 --   Every entry date must be in the past or today
-
 module Handler.Diary
-  ( diaryServer, 
+  ( diaryServer,
     listDiaryEntries,
     createDiaryEntry,
     updateDiaryEntry,
@@ -26,11 +25,9 @@ import Models
 import Servant
 import Types
 
-
 -- | Servant server that wires the four diary endpoints to their handlers
 diaryServer :: ServerT Api.DiaryApi AppM
 diaryServer = listDiaryEntries :<|> createDiaryEntry :<|> updateDiaryEntry :<|> deleteDiaryEntry
-
 
 -- | Return all diary entries across both partners, sorted newest-first
 listDiaryEntries :: AppM [DiaryRow]
@@ -38,14 +35,12 @@ listDiaryEntries = do
   entries <- runDb (selectList [] [Desc DiaryEntryDbDate])
   pure (map diaryRowFromEntity entries)
 
-
 -- | Create a new diary entry and return the persisted row
 createDiaryEntry :: DiaryInput -> AppM DiaryRow
 createDiaryEntry input = do
   guardNotFuture (deiDate input) -- reject future dates
   entryId <- runDb (insert (diaryDbFromInput input))
   getDiaryEntry (toIntKey entryId)
-
 
 -- | Replace all fields of an existing diary entry
 updateDiaryEntry :: Int -> DiaryInput -> AppM NoContent
@@ -57,9 +52,8 @@ updateDiaryEntry rawId input = do
     Nothing -> notFound
     Just _ -> runDb (replace entryId (diaryDbFromInput input)) >> pure NoContent
 
-
 -- | Permanently delete a diary entry
---   Diary entries are not moved to the trash: journals are personal and accidental deletions are prevented by dialogue window 
+--   Diary entries are not moved to the trash: journals are personal and accidental deletions are prevented by dialogue window
 deleteDiaryEntry :: Int -> AppM NoContent
 deleteDiaryEntry rawId = do
   let entryId = fromIntKey rawId :: DiaryEntryDbId
@@ -68,8 +62,7 @@ deleteDiaryEntry rawId = do
     Nothing -> notFound
     Just _ -> runDb (delete entryId) >> pure NoContent
 
-
--- | Load one diary entry by id and convert it to the API response type 
+-- | Load one diary entry by id and convert it to the API response type
 --   Used internally after insert to return the created row with its generated id
 getDiaryEntry :: Int -> AppM DiaryRow
 getDiaryEntry rawId = do
@@ -78,14 +71,12 @@ getDiaryEntry rawId = do
     Nothing -> notFound
     Just entry -> pure (diaryRowFromEntity entry)
 
-
 -- | Reject the request if the entry date is in the future
 guardNotFuture :: UTCTime -> AppM ()
 guardNotFuture date = do
   now <- liftIO getCurrentTime
   when (utctDay date > utctDay now) $
     badRequest "Diary entries cannot be dated in the future."
-
 
 -- | Convert a 'DiaryInput' request body to a Persistent database record
 diaryDbFromInput :: DiaryInput -> DiaryEntryDb
@@ -94,7 +85,6 @@ diaryDbFromInput input =
     (deiOwner input)
     (deiDate input)
     (deiBody input)
-
 
 -- | Convert a Persistent 'Entity DiaryEntryDb' to the API response type 'DiaryRow'
 diaryRowFromEntity :: Entity DiaryEntryDb -> DiaryRow

@@ -10,12 +10,14 @@ import Types exposing (..)
 viewTrash : Model -> Html Msg
 viewTrash model =
     let
-        t = Language.tr model.lang
+        t =
+            Language.tr model.lang
     in
     div []
         [ h2 [ style "margin-bottom" "1rem" ] [ text (t "trash_title") ]
         , if List.isEmpty model.trashedMemories then
             p [ class "empty-state" ] [ text (t "trash_empty") ]
+
           else
             div [ class "memory-list" ]
                 (List.map
@@ -27,6 +29,8 @@ viewTrash model =
                                     [ text (t "restore") ]
                                 ]
                             , p [ class "memory-time" ] [ text mem.timeFrom ]
-                            ])
-                    model.trashedMemories)
+                            ]
+                    )
+                    model.trashedMemories
+                )
         ]

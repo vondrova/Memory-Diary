@@ -21,7 +21,6 @@ module Handler.Tags
 where
 
 import qualified Api
-
 import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Data.Text (Text)

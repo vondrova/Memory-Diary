@@ -55,6 +55,7 @@ module Api.Requests exposing
 {-| HTTP requests to the backend REST API.
 
 Every function returns a `Cmd Msg`, responses arrive as `Msg` values in the update function
+
 -}
 
 import Api.Codec
@@ -77,7 +78,6 @@ import Api.Codec
         , statsDecoder
         , trashEntryDecoder
         )
-
 import File exposing (File)
 import Http
 import Json.Decode as D
@@ -229,6 +229,7 @@ fetchAddressSuggestions query =
 fetchDiary : Cmd Msg
 fetchDiary =
     Http.get { url = apiPath [ "diary" ], expect = Http.expectJson GotDiary (D.list diaryEntryDecoder) }
+
 
 refreshDiary : Cmd Msg
 refreshDiary =

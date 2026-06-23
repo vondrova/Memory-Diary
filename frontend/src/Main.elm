@@ -1,6 +1,6 @@
 module Main exposing (main)
 
-{-| Entry point for the Memory Diary 
+{-| Entry point for the Memory Diary
 -}
 
 import Browser
@@ -11,7 +11,11 @@ import Update exposing (update)
 import Url exposing (Url)
 import View exposing (view)
 
+
+
 -- | Handle URL changes by updating the route in the model
+
+
 main : Program { year : Int, month : Int, day : Int } Model Msg
 main =
     Browser.application

@@ -5,7 +5,6 @@
 --   Covered types: 'MemoryInput', 'ImportantDayInput', 'NoteInput', 'PlanInput',
 --   'RenameInput', 'DeleteCategoryInput', 'RelationshipInput', 'ProfileInput',
 --   'DiaryInput'
-
 module TypesSpec (spec) where
 
 import Data.Aeson (decode, encode)

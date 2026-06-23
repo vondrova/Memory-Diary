@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | HTTP handlers for the api important-days endpoints
-
 --   Manages manual important days and includes profile birthdays in list results
+
+-- | HTTP handlers for the api important-days endpoints
 module Handler.ImportantDays
   ( importantDayServer,
     listImportantDays,

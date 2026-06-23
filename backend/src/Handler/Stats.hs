@@ -7,9 +7,9 @@ module Handler.Stats
 where
 
 import qualified Api
-import Handler.Helpers (AppM, runDb)
 import Database.Persist (selectList)
 import Domain.Aggregation (computeStats)
+import Handler.Helpers (AppM, runDb)
 import Handler.Memories (memoryRowFromEntity)
 import Models (Stats)
 import Servant (ServerT)

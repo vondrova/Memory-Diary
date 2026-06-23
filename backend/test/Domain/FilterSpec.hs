@@ -10,7 +10,6 @@
 --                         filters (free-text, tag, location, date range);
 --                         search is case-insensitive and matches substrings
 --   * validFilterRange — validates that a date range is not reversed
-
 module Domain.FilterSpec (spec) where
 
 import Domain.Filter

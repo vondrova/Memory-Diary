@@ -3,16 +3,19 @@ module Page.Plans exposing (viewPlans)
 {-| Plans page for the shared bucket list grouped by category.
 -}
 
-import Utils.Helpers exposing (isBlank, planFormValid, requiredClass, validationNotice)
 import Html exposing (Html, button, div, h1, h2, h3, input, label, p, section, span, text, textarea)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onCheck, onClick, onInput)
 import Language exposing (tr)
 import Page.Timeline exposing (onEnter)
 import Types exposing (..)
+import Utils.Helpers exposing (isBlank, planFormValid, requiredClass, validationNotice)
+
 
 
 -- | Page root: hero, Pending/Done tabs, optional panels, and category groups
+
+
 viewPlans : Model -> Html Msg
 viewPlans model =
     let
@@ -105,7 +108,10 @@ viewPlans model =
         ]
 
 
+
 -- | Form for creating or editing a plan, category field has a filterable dropdown
+
+
 viewPlanForm : Language -> PlanForm -> List String -> Html Msg
 viewPlanForm lang form categories =
     let
@@ -186,7 +192,10 @@ viewPlanForm lang form categories =
         ]
 
 
+
 -- | Section for one category with a header, count badge, and plan card grid
+
+
 viewPlanGroup : Language -> PlanTab -> List CouplePlan -> String -> Html Msg
 viewPlanGroup lang tab plans categoryName =
     let
@@ -233,7 +242,10 @@ viewPlanGroup lang tab plans categoryName =
         ]
 
 
+
 -- | Modal for creating, renaming, and deleting categories
+
+
 viewCategoryPanel : Language -> CategoryForm -> List String -> Html Msg
 viewCategoryPanel lang form categories =
     let
@@ -269,7 +281,10 @@ viewCategoryPanel lang form categories =
         ]
 
 
+
 -- | One row in the category panel, switches to an inline text input while editing
+
+
 viewCategoryRow : Language -> CategoryForm -> String -> Html Msg
 viewCategoryRow lang form categoryName =
     if form.editOldName == Just categoryName then
@@ -320,7 +335,10 @@ viewCategoryRow lang form categoryName =
             ]
 
 
+
 -- | Card for one plan: done badge, title, optional detail, toggle, edit, and delete
+
+
 viewPlanCard : Language -> CouplePlan -> Html Msg
 viewPlanCard lang plan =
     div

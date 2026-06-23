@@ -26,8 +26,6 @@ import Api.Requests
         )
 import Browser
 import Browser.Navigation as Nav
-import Utils.DateUtils exposing (nextMonth, prevMonth)
-import Utils.Helpers exposing (setFFrom, setFLoc, setFQ, setFTag, setFTo)
 import Init exposing (emptyFilter)
 import Routing exposing (languageFromUrl, pageFromUrl, pageUrlFor)
 import Types exposing (..)
@@ -38,11 +36,15 @@ import Update.Notes as Notes
 import Update.Plans as Plans
 import Update.Relationship as Relationship
 import Update.Tags as Tags
-import Utils.Helpers exposing (mutationFailure)
 import Url exposing (Url)
+import Utils.DateUtils exposing (nextMonth, prevMonth)
+import Utils.Helpers exposing (mutationFailure, setFFrom, setFLoc, setFQ, setFTag, setFTo)
+
 
 
 -- | Root TEA update, dispatches every Msg to the appropriate domain handler
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of

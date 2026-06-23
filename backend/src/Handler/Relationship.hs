@@ -16,7 +16,6 @@ module Handler.Relationship
 where
 
 import qualified Api
-import Handler.Helpers (AppM, runDb)
 import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text)
@@ -29,6 +28,7 @@ import Domain.Recurrence
     ordinalMonths,
     ordinalYears,
   )
+import Handler.Helpers (AppM, runDb)
 import Models
 import Servant
 import Types
@@ -181,4 +181,3 @@ defaultPerson side =
       personProfileDbExpression = if side == "left" then "smile" else "laugh",
       personProfileDbBirthday = Nothing
     }
-

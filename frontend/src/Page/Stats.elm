@@ -4,15 +4,18 @@ module Page.Stats exposing (viewStats)
 -}
 
 import Dict
-import Utils.DateUtils exposing (dayKey, fromJulian, mondayFirst, toJulian)
-import Utils.Helpers exposing (formatDuration)
 import Html exposing (Html, div, h1, h3, p, small, span, strong, text)
 import Html.Attributes exposing (..)
 import Language exposing (tr)
 import Types exposing (..)
+import Utils.DateUtils exposing (dayKey, fromJulian, mondayFirst, toJulian)
+import Utils.Helpers exposing (formatDuration)
+
 
 
 -- | Page root: metric grid, insight grid, monthly bar chart, and year heatmap
+
+
 viewStats : Model -> Html Msg
 viewStats model =
     case model.stats of
@@ -55,7 +58,10 @@ viewStats model =
                 ]
 
 
+
 -- | Format the longest memory as "title · duration", or a language fallback when none exist
+
+
 longestLabel : Language -> Stats -> String
 longestLabel lang s =
     case s.longestTitle of
@@ -71,7 +77,10 @@ longestLabel lang s =
             title ++ " · " ++ formatDuration s.longestMinutes
 
 
+
 -- | Format the top-ranked item as "name · count×", or a fallback when the list is empty
+
+
 topPairLabel : String -> List ( String, Int ) -> String
 topPairLabel fallback pairs =
     pairs
@@ -80,7 +89,10 @@ topPairLabel fallback pairs =
         |> Maybe.withDefault fallback
 
 
+
 -- | Large metric tile: label above, big value, and small hint below
+
+
 viewMetricCard : String -> String -> String -> Html Msg
 viewMetricCard label value hint =
     div [ class "stats-card metric-card" ]
@@ -90,7 +102,10 @@ viewMetricCard label value hint =
         ]
 
 
+
 -- | Insight tile with a prominent value and a hint line below
+
+
 viewStatsInsight : String -> String -> String -> Html Msg
 viewStatsInsight label value hint =
     div [ class "stats-card insight-card" ]
@@ -100,7 +115,10 @@ viewStatsInsight label value hint =
         ]
 
 
+
 -- | Horizontal bar chart where each bar's width is proportional to the maximum count
+
+
 viewBarChart : List ( String, Int ) -> Html Msg
 viewBarChart items =
     let
@@ -127,7 +145,10 @@ viewBarChart items =
         )
 
 
+
 -- | GitHub-style heatmap showing the last ~53 weeks, columns start on Monday
+
+
 viewHeatmap : Language -> Today -> List ( String, Int ) -> Html Msg
 viewHeatmap lang today dailyActivity =
     let
@@ -189,7 +210,15 @@ viewHeatmap lang today dailyActivity =
                 in
                 div
                     [ class ("heat-cell heat-" ++ lvl)
-                    , title (key ++ if count > 0 then " · " ++ String.fromInt count else "")
+                    , title
+                        (key
+                            ++ (if count > 0 then
+                                    " · " ++ String.fromInt count
+
+                                else
+                                    ""
+                               )
+                        )
                     ]
                     []
 
@@ -222,36 +251,85 @@ viewHeatmap lang today dailyActivity =
         ]
 
 
+
 -- | Three-letter month abbreviation for the heatmap column header, localized for supported languages
+
+
 heatMonthShort : Language -> Int -> String
 heatMonthShort lang m =
     case lang of
         Czech ->
             case m of
-                1 -> "Led"
-                2 -> "Úno"
-                3 -> "Bře"
-                4 -> "Dub"
-                5 -> "Kvě"
-                6 -> "Čvn"
-                7 -> "Čvc"
-                8 -> "Srp"
-                9 -> "Zář"
-                10 -> "Říj"
-                11 -> "Lis"
-                _ -> "Pro"
+                1 ->
+                    "Led"
+
+                2 ->
+                    "Úno"
+
+                3 ->
+                    "Bře"
+
+                4 ->
+                    "Dub"
+
+                5 ->
+                    "Kvě"
+
+                6 ->
+                    "Čvn"
+
+                7 ->
+                    "Čvc"
+
+                8 ->
+                    "Srp"
+
+                9 ->
+                    "Zář"
+
+                10 ->
+                    "Říj"
+
+                11 ->
+                    "Lis"
+
+                _ ->
+                    "Pro"
 
         English ->
             case m of
-                1 -> "Jan"
-                2 -> "Feb"
-                3 -> "Mar"
-                4 -> "Apr"
-                5 -> "May"
-                6 -> "Jun"
-                7 -> "Jul"
-                8 -> "Aug"
-                9 -> "Sep"
-                10 -> "Oct"
-                11 -> "Nov"
-                _ -> "Dec"
+                1 ->
+                    "Jan"
+
+                2 ->
+                    "Feb"
+
+                3 ->
+                    "Mar"
+
+                4 ->
+                    "Apr"
+
+                5 ->
+                    "May"
+
+                6 ->
+                    "Jun"
+
+                7 ->
+                    "Jul"
+
+                8 ->
+                    "Aug"
+
+                9 ->
+                    "Sep"
+
+                10 ->
+                    "Oct"
+
+                11 ->
+                    "Nov"
+
+                _ ->
+                    "Dec"

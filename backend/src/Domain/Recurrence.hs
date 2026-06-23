@@ -6,7 +6,7 @@ module Domain.Recurrence
     nextMonthiversary,
     ordinalYears, -- number of complete years between start and occurrence, used for "Xth anniversary" labels
     ordinalMonths, -- number of complete months between start and occurrence, used for "Xth monthiversary" labels
-    diffMonths, -- signed difference in whole months between two dates, used internally by ordinalMonths and nextMonthiversary  
+    diffMonths, -- signed difference in whole months between two dates, used internally by ordinalMonths and nextMonthiversary
   )
 where
 
@@ -24,8 +24,8 @@ nextAnnualOccurrence :: UTCTime -> UTCTime -> UTCTime
 nextAnnualOccurrence now start =
   let today = utctDay now -- without time component
       (_, month, day) = toGregorian (utctDay start)
-      (year, _, _) = toGregorian today 
-      thisYear = fromGregorian year month day 
+      (year, _, _) = toGregorian today
+      thisYear = fromGregorian year month day
       nextDay = if thisYear >= today then thisYear else fromGregorian (year + 1) month day -- if this year's occurrence has passed, use next year
    in UTCTime nextDay 0 -- without time component
 

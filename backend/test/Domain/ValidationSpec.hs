@@ -12,7 +12,6 @@
 --   * Note validation — requires owner, title, and body; rejects display names
 --                       as owner values (only "left", "right", "shared" allowed)
 --   * Plan validation — requires title; accepts blank category (backend fills it in)
-
 module Domain.ValidationSpec (spec) where
 
 import Domain.Validation

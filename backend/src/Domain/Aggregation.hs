@@ -1,7 +1,7 @@
 -- | Pure aggregation and statistics over memory rows
 module Domain.Aggregation
   ( computeStats, -- make the whole Stats summary from a list of MemoryRow
-    memDurationMinutes,-- duration of one memory in minutes
+    memDurationMinutes, -- duration of one memory in minutes
     countItems, -- occurences of each distinct value in a list
     topByCount, -- top 10 items by count, descending
   )
@@ -13,7 +13,7 @@ import Data.Maybe (mapMaybe) -- for counting non-null locations
 import Data.Ord (Down (..), comparing) -- for sorting by count descending
 import qualified Data.Text as T -- for formatting dates in stats
 import Data.Time -- for computing durations and formatting dates in stats
-import Models (Stats (..)) 
+import Models (Stats (..))
 import Types
 
 -- | Aggregate a list of memory rows into a 'Stats' summary

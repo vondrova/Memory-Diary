@@ -95,7 +95,7 @@ validateMemoryRange start end =
     then Right ()
     else Left InvalidTimeRange
 
--- | Strip leading/trailing whitespace...fail with 'RequiredField' if the result is empty 
+-- | Strip leading/trailing whitespace...fail with 'RequiredField' if the result is empty
 requireNonBlank :: Text -> Text -> Either ValidationError Text
 requireNonBlank fieldName value =
   let trimmed = T.strip value

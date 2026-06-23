@@ -3,6 +3,11 @@ module Page.ImportantDays exposing (viewImportantDays)
 {-| Important-days page for couple dates and reminders
 -}
 
+import Html exposing (Html, button, div, h1, h2, h3, input, label, p, small, span, text)
+import Html.Attributes exposing (..)
+import Html.Events exposing (onClick, onInput)
+import Language exposing (tr)
+import Types exposing (..)
 import Utils.DateUtils exposing (dateParts)
 import Utils.Helpers
     exposing
@@ -15,14 +20,12 @@ import Utils.Helpers
         , requiredClass
         , validationNotice
         )
-import Html exposing (Html, button, div, h1, h2, h3, input, label, p, small, span, text)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput)
-import Language exposing (tr)
-import Types exposing (..)
+
 
 
 -- | Page root: relationship panel, add button, and sorted list of important days
+
+
 viewImportantDays : Model -> Html Msg
 viewImportantDays model =
     div [ class "milestones-page" ]
@@ -60,7 +63,10 @@ viewImportantDays model =
         ]
 
 
+
 -- | Relationship counter panel, shows stats or a prompt to set the start date
+
+
 viewRelationshipPanel : Language -> Today -> String -> Bool -> Status RelationshipData -> Bool -> Html Msg
 viewRelationshipPanel lang today dateInput showValidation relationship editingRelationship =
     div [ class "relationship-panel" ]
@@ -104,7 +110,10 @@ viewRelationshipPanel lang today dateInput showValidation relationship editingRe
         ]
 
 
+
 -- | Modal for setting the relationship start date
+
+
 viewRelationshipEditorModal : Language -> String -> Bool -> Html Msg
 viewRelationshipEditorModal lang dateInput showValidation =
     div [ class "modal-backdrop" ]
@@ -123,7 +132,10 @@ viewRelationshipEditorModal lang dateInput showValidation =
         ]
 
 
+
 -- | Days-together counter plus next monthiversary and anniversary
+
+
 viewRelationshipStats : Language -> Today -> RelationshipData -> Html Msg
 viewRelationshipStats lang _ relationship =
     let
@@ -140,7 +152,10 @@ viewRelationshipStats lang _ relationship =
         ]
 
 
+
 -- | One relationship milestone: label, countdown, and formatted date
+
+
 viewRelationshipEvent : Language -> String -> Maybe String -> Maybe Int -> Maybe Int -> Html Msg
 viewRelationshipEvent lang label maybeDate maybeNumber maybeDays =
     case Maybe.andThen dateParts maybeDate of
@@ -167,8 +182,11 @@ viewRelationshipEvent lang label maybeDate maybeNumber maybeDays =
                 ]
 
 
+
 -- | Card for one important day: date, title, countdown, and optional note.
 -- Only manual records (kind == "manual") show edit/delete buttons
+
+
 viewImportantDayCard : Language -> Today -> ImportantDay -> Html Msg
 viewImportantDayCard lang _ ann =
     let
@@ -202,13 +220,19 @@ viewImportantDayCard lang _ ann =
         ]
 
 
+
 -- | Sort days by daysUntil so the soonest appears first
+
+
 sortedImportantDays : Today -> List ImportantDay -> List ImportantDay
 sortedImportantDays _ importantDays =
     List.sortBy .daysUntil importantDays
 
 
+
 -- | Inline form for creating or editing a manual important day
+
+
 viewImportantDayForm : Language -> ImportantDayForm -> Html Msg
 viewImportantDayForm lang form =
     div [ class "form-card" ]

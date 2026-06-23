@@ -19,67 +19,94 @@ import Types exposing (..)
 import Url exposing (Url)
 
 
--- EMPTY FORMS -----------------------------------------------
 
+-- EMPTY FORMS -----------------------------------------------
 -- | Blank filter with all search fields cleared
+
+
 emptyFilter : Filter
 emptyFilter =
     { q = "", tag = "", location = "", dateFrom = "", dateTo = "" }
 
 
+
 -- | Blank memory creation/edit form
+
+
 emptyMemForm : MemForm
 emptyMemForm =
     { open = False, editId = Nothing, title = "", timeFrom = "", timeTo = "", description = "", location = "", locSuggestOpen = False, tagSuggestOpen = False, tags = [], photos = [], showValidation = False }
 
 
+
 -- | Blank important-day form
+
+
 emptyImportantDayForm : ImportantDayForm
 emptyImportantDayForm =
     { open = False, editId = Nothing, title = "", date = "", note = "", showValidation = False }
 
 
+
 -- | Blank note form; defaults owner to "shared"
+
+
 emptyNoteForm : NoteForm
 emptyNoteForm =
     { open = False, editId = Nothing, owner = "shared", title = "", body = "", showValidation = False }
 
 
+
 -- | Blank plan form
+
+
 emptyPlanForm : PlanForm
 emptyPlanForm =
     { open = False, editId = Nothing, category = "", catSuggestOpen = False, title = "", detail = "", done = False, showValidation = False }
 
 
+
 -- | Blank category management form
+
+
 emptyCategoryForm : CategoryForm
 emptyCategoryForm =
     { open = False, editOldName = Nothing, editNewName = "", newName = "" }
 
 
+
 -- | Blank diary entry form; defaults owner to "left"
+
+
 emptyDiaryForm : DiaryForm
 emptyDiaryForm =
     { open = False, editId = Nothing, owner = "left", date = "", body = "", showValidation = False }
 
 
--- DEFAULT AVATARS -----------------------------------------------
 
+-- DEFAULT AVATARS -----------------------------------------------
 -- | Placeholder left avatar shown until a profile loads from the backend
+
+
 defaultLeftAvatar : AvatarProfile
 defaultLeftAvatar =
     { name = "", mode = "figure", photo = "", figureColor = "figure-red", accessory = "flower", expression = "smile", birthday = "" }
 
 
+
 -- | Placeholder right avatar shown until a profile loads from the backend
+
+
 defaultRightAvatar : AvatarProfile
 defaultRightAvatar =
     { name = "", mode = "figure", photo = "", figureColor = "figure-blue", accessory = "hat", expression = "laugh", birthday = "" }
 
 
--- INIT -----------------------------------------------
 
+-- INIT -----------------------------------------------
 -- | Bootstrap the application; `flags` carries today's date from JS, the diary form is pre-filled with today's date
+
+
 init : { year : Int, month : Int, day : Int } -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let

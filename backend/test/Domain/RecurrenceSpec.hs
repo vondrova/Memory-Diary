@@ -9,8 +9,7 @@
 --                          and correct rollover after the date has already
 --                          passed this year
 --   * Monthiversaries    — next monthly occurrence, ordinal counter, and
---                          correct clipping to shorter months 
-
+--                          correct clipping to shorter months
 module Domain.RecurrenceSpec (spec) where
 
 import Data.Time (fromGregorian)

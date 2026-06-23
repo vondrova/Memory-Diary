@@ -20,9 +20,11 @@ import Routing exposing (pageUrlFor)
 import Types exposing (..)
 
 
--- VIEW ROOT -----------------------------------------------
 
+-- VIEW ROOT -----------------------------------------------
 -- | Top-level document: wraps the active page view and all shared overlays
+
+
 view : Model -> Browser.Document Msg
 view model =
     { title = "Memory Diary"
@@ -90,9 +92,11 @@ view model =
     }
 
 
--- DIALOGS -----------------------------------------------
 
+-- DIALOGS -----------------------------------------------
 -- | Modal confirmation dialog with action-specific message and yes/cancel buttons
+
+
 viewConfirmDialog : Language -> { message : String, action : ConfirmAction } -> Html Msg
 viewConfirmDialog lang dialog =
     div [ class "modal-backdrop" ]
@@ -106,7 +110,10 @@ viewConfirmDialog lang dialog =
         ]
 
 
+
 -- | Resolve localized confirmation text for each action; falls back to the caller-supplied string for categories
+
+
 confirmMessage : Language -> ConfirmAction -> String -> String
 confirmMessage lang action fallback =
     case action of
@@ -135,7 +142,10 @@ confirmMessage lang action fallback =
             tr lang "Really delete this entry?"
 
 
+
 -- | Non-destructive info overlay shown after a failed mutation
+
+
 viewInfoDialog : Language -> String -> Html Msg
 viewInfoDialog lang message =
     div [ class "modal-backdrop" ]
@@ -148,9 +158,11 @@ viewInfoDialog lang message =
         ]
 
 
--- SIDE PANELS -----------------------------------------------
 
+-- SIDE PANELS -----------------------------------------------
 -- | Slide-in panel for managing the global tag catalog
+
+
 viewTagPanel : Language -> TagLocationForm -> List String -> Html Msg
 viewTagPanel lang form allTags =
     div [ class "modal-backdrop" ]
@@ -177,7 +189,10 @@ viewTagPanel lang form allTags =
         ]
 
 
+
 -- | Single tag row: shows an inline edit input when this tag is being renamed, otherwise name + action buttons
+
+
 viewTagRow : TagLocationForm -> String -> Html Msg
 viewTagRow form tag =
     if form.editOldName == Just tag then
@@ -211,7 +226,10 @@ viewTagRow form tag =
             ]
 
 
+
 -- | Slide-in panel for managing the global place catalog
+
+
 viewLocationPanel : Language -> TagLocationForm -> List String -> Html Msg
 viewLocationPanel lang form allLocs =
     div [ class "modal-backdrop" ]
@@ -238,7 +256,10 @@ viewLocationPanel lang form allLocs =
         ]
 
 
+
 -- | Single place row: inline edit when renaming, otherwise name + action buttons
+
+
 viewLocationRow : TagLocationForm -> String -> Html Msg
 viewLocationRow form loc =
     if form.editOldName == Just loc then
@@ -272,7 +293,10 @@ viewLocationRow form loc =
             ]
 
 
+
 -- | Slide-in panel listing soft-deleted items with restore and permanent-delete actions
+
+
 viewTrashPanel : Language -> Status (List TrashEntry) -> Html Msg
 viewTrashPanel lang status =
     div [ class "modal-backdrop" ]
@@ -299,7 +323,10 @@ viewTrashPanel lang status =
         ]
 
 
+
 -- | Single trash row: kind badge, item name, restore and permanent-delete buttons
+
+
 viewTrashEntry : Language -> TrashEntry -> Html Msg
 viewTrashEntry lang entry =
     div [ class "trash-entry" ]
@@ -314,7 +341,10 @@ viewTrashEntry lang entry =
         ]
 
 
+
 -- | Human-readable label for a trash entry kind string
+
+
 kindLabel : String -> String
 kindLabel kind =
     case kind of
@@ -334,9 +364,11 @@ kindLabel kind =
             kind
 
 
--- NAVIGATION -----------------------------------------------
 
+-- NAVIGATION -----------------------------------------------
 -- | Top navigation bar with page tabs, language toggle, theme picker, and trash button
+
+
 viewNav : Model -> Html Msg
 viewNav model =
     nav [ class "nav" ]
@@ -354,7 +386,10 @@ viewNav model =
         ]
 
 
+
 -- | Single navigation anchor; receives active class when the tab's page matches the current page
+
+
 navTab : Language -> Page -> Page -> String -> Html Msg
 navTab lang page current label =
     a
@@ -370,9 +405,11 @@ navTab lang page current label =
         [ text label ]
 
 
--- THEME -----------------------------------------------
 
+-- THEME -----------------------------------------------
 -- | Colour-theme picker overlay with a swatch grid
+
+
 viewThemePicker : Language -> String -> Html Msg
 viewThemePicker lang currentTheme =
     div [ class "modal-backdrop" ]
@@ -397,7 +434,10 @@ viewThemePicker lang currentTheme =
         ]
 
 
+
 -- | Clickable colour button; receives an active class when it is the selected theme
+
+
 themeSwatch : String -> String -> String -> Html Msg
 themeSwatch theme color currentTheme =
     button

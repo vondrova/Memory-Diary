@@ -3,6 +3,12 @@ module Page.Timeline exposing (onEnter, viewMemoryCard, viewTimeline)
 {-| Timeline page: memory list with filters, the CRUD form, and on-this-day band
 -}
 
+import Html exposing (Attribute, Html, a, button, datalist, div, h1, h2, h3, img, input, label, option, p, span, strong, text, textarea)
+import Html.Attributes exposing (..)
+import Html.Events exposing (on, onClick, onInput)
+import Json.Decode as D
+import Language exposing (tr)
+import Types exposing (..)
 import Utils.FormUtils exposing (memRequiredFieldsValid, validTimeOrder)
 import Utils.Helpers
     exposing
@@ -15,15 +21,12 @@ import Utils.Helpers
         , uniqueStrings
         , validationNotice
         )
-import Html exposing (Attribute, Html, a, button, datalist, div, h1, h2, h3, img, input, label, option, p, span, strong, text, textarea)
-import Html.Attributes exposing (..)
-import Html.Events exposing (on, onClick, onInput)
-import Json.Decode as D
-import Language exposing (tr)
-import Types exposing (..)
+
 
 
 -- | Page root: hero, on-this-day band, filter bar, optional form, and memory list
+
+
 viewTimeline : Model -> Html Msg
 viewTimeline model =
     div []
@@ -67,7 +70,10 @@ viewTimeline model =
         ]
 
 
+
 -- | Horizontal strip of mini cards from the same day in past years, hidden when empty
+
+
 viewOnThisDay : Language -> Status (List Memory) -> Html Msg
 viewOnThisDay lang status =
     case status of
@@ -84,7 +90,10 @@ viewOnThisDay lang status =
             text ""
 
 
+
 -- | Compact card showing just the year and title of an on-this-day memory
+
+
 viewOtdCard : Language -> Memory -> Html Msg
 viewOtdCard lang mem =
     div [ class "otd-card" ]
@@ -105,7 +114,10 @@ viewOtdCard lang mem =
         ]
 
 
+
 -- | Filter bar: full-text search, tag, place, and date-range inputs with a clear button
+
+
 viewFilterPanel : Language -> Filter -> List String -> List String -> Html Msg
 viewFilterPanel lang f tagOptions locationOptions =
     div [ class "filter-panel" ]
@@ -130,7 +142,10 @@ viewFilterPanel lang f tagOptions locationOptions =
         ]
 
 
+
 -- | Full memory card: time range, location link, description, tag chips, and photo strip
+
+
 viewMemoryCard : Language -> Memory -> Html Msg
 viewMemoryCard lang mem =
     div [ class "memory-card" ]
@@ -175,7 +190,10 @@ viewMemoryCard lang mem =
         ]
 
 
+
 -- | Large CRUD form with tag/location autocomplete dropdowns and a photo uploader
+
+
 viewMemForm : Language -> MemForm -> String -> String -> List String -> List String -> List String -> Html Msg
 viewMemForm lang form tagIn photoIn availableTags storedLocs nominatimSuggestions =
     div [ class "form-card" ]
@@ -396,7 +414,10 @@ viewMemForm lang form tagIn photoIn availableTags storedLocs nominatimSuggestion
         ]
 
 
+
 -- | Fire a Msg when the Enter key is pressed, shared with the Plans page
+
+
 onEnter : Msg -> Attribute Msg
 onEnter msg =
     on "keydown"
@@ -412,7 +433,10 @@ onEnter msg =
         )
 
 
+
 -- | Fire a Msg when the ArrowDown key is pressed, used to open location suggestions
+
+
 onArrowDown : Msg -> Attribute Msg
 onArrowDown msg =
     on "keydown"

@@ -3,17 +3,20 @@ module Page.Notes exposing (viewNotes)
 {-| Notes page for per-person and shared notebook entries.
 -}
 
-import Utils.FormUtils exposing (noteTabOwner)
-import Utils.Helpers exposing (isBlank, noteFormValid, requiredClass, validationNotice)
 import Html exposing (Html, aside, button, div, h1, h2, h3, input, label, option, p, select, span, strong, text, textarea)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 import Language exposing (tr)
 import Page.Home exposing (viewAvatarName, viewAvatarVisual)
 import Types exposing (..)
+import Utils.FormUtils exposing (noteTabOwner)
+import Utils.Helpers exposing (isBlank, noteFormValid, requiredClass, validationNotice)
+
 
 
 -- | Page root: hero, tabs, search bar, form, and note grid
+
+
 viewNotes : Model -> Html Msg
 viewNotes model =
     div [ class "notes-page" ]
@@ -77,7 +80,10 @@ viewNotes model =
         ]
 
 
+
 -- | Three-tab strip for shared, left, and right notes
+
+
 viewNoteTabs : Model -> Html Msg
 viewNoteTabs model =
     div [ class "plan-tabs note-tabs-simple" ]
@@ -87,7 +93,10 @@ viewNoteTabs model =
         ]
 
 
+
 -- | Single tab button, active tab gets the active class and shows the short label
+
+
 viewNoteTabButton : Model -> NoteTab -> Html Msg
 viewNoteTabButton model tab =
     button
@@ -104,7 +113,10 @@ viewNoteTabButton model tab =
         [ viewNoteTabLabel model tab True ]
 
 
+
 -- | Sidebar with avatar visual and section description
+
+
 viewNoteSectionAside : Model -> NoteTab -> Html Msg
 viewNoteSectionAside model tab =
     aside [ class "note-section-aside" ]
@@ -129,7 +141,10 @@ viewNoteSectionAside model tab =
         ]
 
 
+
 -- | Tab label: avatar name for personal tabs, "Shared" for the shared tab
+
+
 viewNoteTabLabel : Model -> NoteTab -> Bool -> Html Msg
 viewNoteTabLabel model tab short =
     case tab of
@@ -151,7 +166,10 @@ viewNoteTabLabel model tab short =
             viewAvatarName model.rightAvatar.name
 
 
+
 -- | Subtitle text shown in the shared notes aside panel
+
+
 noteTabSubtitle : Model -> NoteTab -> String
 noteTabSubtitle model tab =
     case tab of
@@ -165,13 +183,19 @@ noteTabSubtitle model tab =
             ""
 
 
+
 -- | True if the note belongs to the currently active tab
+
+
 noteMatchesTab : Model -> NoteTab -> CoupleNote -> Bool
 noteMatchesTab model tab note =
     note.owner == noteTabOwner tab
 
 
+
 -- | Case-insensitive substring match against note title and body
+
+
 noteMatchesSearch : String -> CoupleNote -> Bool
 noteMatchesSearch query note =
     let
@@ -186,7 +210,10 @@ noteMatchesSearch query note =
             || String.contains q (String.toLower note.body)
 
 
+
 -- | Disable the add button for personal tabs when the avatar has no name yet
+
+
 canCreateNoteForTab : Model -> NoteTab -> Bool
 canCreateNoteForTab model tab =
     case tab of
@@ -200,7 +227,10 @@ canCreateNoteForTab model tab =
             not (String.isEmpty (String.trim model.rightAvatar.name))
 
 
+
 -- | Placeholder text shown when a tab has no notes
+
+
 emptyNoteText : NoteTab -> String
 emptyNoteText tab =
     case tab of
@@ -214,8 +244,11 @@ emptyNoteText tab =
             "This can hold allergies, favorite colors, sizes, comfort movies, or small tips for making them happy."
 
 
+
 -- | Inline form for creating or editing a note
 -- Owner options are filtered to avatars that have a name, shared is always available
+
+
 viewNoteForm : Model -> NoteForm -> Html Msg
 viewNoteForm model form =
     let
@@ -266,7 +299,10 @@ viewNoteForm model form =
         ]
 
 
+
 -- | Note card with owner badge, title, body, and edit/delete action buttons
+
+
 viewNoteCard : Model -> CoupleNote -> Html Msg
 viewNoteCard model note =
     div [ class "note-card" ]
@@ -282,7 +318,10 @@ viewNoteCard model note =
         ]
 
 
+
 -- | Avatar name or "Shared" label for the owner field in a note card
+
+
 viewNoteOwner : Model -> String -> Html Msg
 viewNoteOwner model owner =
     case owner of

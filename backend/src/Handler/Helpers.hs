@@ -2,29 +2,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Shared HTTP-layer utilities and the application monad used across all handler modules.
-
 module Handler.Helpers
   ( -- Application monad
     AppM,
     runDb,
-
     -- Entity key conversion
     fromIntKey,
     toIntKey,
-
     -- HTTP error helpers
     badRequest,
     notFound,
     validateInput,
-
     -- Soft-delete support
     moveToTrash,
     encodeToText,
-
     -- JSON name extraction
     JustName (..),
     extractName,
-
     -- Collection utilities
     dedupeText,
   )

@@ -11,7 +11,10 @@ import Page.Home exposing (viewAvatarName)
 import Types exposing (..)
 
 
+
 -- | Page root: owner tabs, write area, and entry list
+
+
 viewDiary : Model -> Html Msg
 viewDiary model =
     div [ class "diary-page" ]
@@ -21,7 +24,10 @@ viewDiary model =
         ]
 
 
+
 -- | Left/right tab strip for switching between partners
+
+
 viewOwnerTabs : Model -> Html Msg
 viewOwnerTabs model =
     div [ class "diary-owner-tabs" ]
@@ -30,7 +36,10 @@ viewOwnerTabs model =
         ]
 
 
+
 -- | Single tab button, the active tab gets an accent underline via an extra CSS class
+
+
 ownerTabBtn : Model -> DiaryTab -> String -> Html Msg
 ownerTabBtn model tab name =
     button
@@ -47,7 +56,10 @@ ownerTabBtn model tab name =
         [ viewAvatarName name ]
 
 
+
 -- | Always-visible inline form: date input (max = today), textarea, validation messages, save button
+
+
 viewWriteArea : Model -> Html Msg
 viewWriteArea model =
     let
@@ -119,7 +131,10 @@ viewWriteArea model =
         ]
 
 
+
 -- | Entry list filtered to the active owner tab, the backend returns all entries for both partners
+
+
 viewBook : Model -> Html Msg
 viewBook model =
     let
@@ -151,7 +166,10 @@ viewBook model =
                     (List.map (viewBookEntry model.lang) visible)
 
 
+
 -- | One journal page, edit/delete action buttons are hidden via CSS and revealed on hover
+
+
 viewBookEntry : Language -> DiaryEntry -> Html Msg
 viewBookEntry lang entry =
     div [ class "diary-book-entry" ]
@@ -178,13 +196,19 @@ viewBookEntry lang entry =
         ]
 
 
+
 -- | Trim a UTC timestamp like "2026-06-22T00:00:00Z" to just the date "2026-06-22"
+
+
 formatDate : String -> String
 formatDate iso =
     String.left 10 iso
 
 
+
 -- | Format today as YYYY-MM-DD, used as the date input max attribute and in frontend validation
+
+
 todayStr : { year : Int, month : Int, day : Int } -> String
 todayStr d =
     String.fromInt d.year

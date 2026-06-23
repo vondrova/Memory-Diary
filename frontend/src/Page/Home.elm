@@ -3,6 +3,12 @@ module Page.Home exposing (viewAvatarName, viewAvatarVisual, viewHome)
 {-| Home page: couple overview, upcoming events, and dashboard panels.
 -}
 
+import Html exposing (Html, a, aside, br, button, div, em, h1, h2, h3, img, input, label, li, nav, option, p, section, select, small, span, strong, text, textarea, ul)
+import Html.Attributes exposing (..)
+import Html.Events exposing (onCheck, onClick, onInput)
+import Language exposing (tr)
+import Routing exposing (pageUrlFor)
+import Types exposing (..)
 import Utils.DateUtils exposing (dateParts)
 import Utils.Helpers
     exposing
@@ -16,12 +22,6 @@ import Utils.Helpers
         , zodiacName
         , zodiacSymbol
         )
-import Html exposing (Html, a, aside, br, button, div, em, h1, h2, h3, img, input, label, li, nav, option, p, section, select, small, span, strong, text, textarea, ul)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onCheck, onClick, onInput)
-import Language exposing (tr)
-import Routing exposing (pageUrlFor)
-import Types exposing (..)
 
 
 viewHome : Model -> Html Msg
@@ -38,7 +38,10 @@ viewHome model =
         ]
 
 
+
 -- | Compact upcoming-event card linking to the important-days page
+
+
 viewHomeSnapshot : Model -> Html Msg
 viewHomeSnapshot model =
     let
@@ -56,7 +59,10 @@ viewHomeSnapshot model =
     div [ class "home-snapshot" ] [ viewUpcomingSnapshot model.lang nextEvents ]
 
 
+
 -- | Renders the nearest event as a countdown, or a placeholder if none exist
+
+
 viewUpcomingSnapshot : Language -> List UpcomingEvent -> Html Msg
 viewUpcomingSnapshot lang events =
     case events of
@@ -79,7 +85,10 @@ viewUpcomingSnapshot lang events =
                 ]
 
 
+
 -- | Three highlight panels: latest memories, open plans, and on-this-day memories
+
+
 viewHomeHighlights : Model -> Html Msg
 viewHomeHighlights model =
     let
@@ -114,7 +123,10 @@ viewHomeHighlights model =
         ]
 
 
+
 -- | Shows the three most recent memories, links to the timeline
+
+
 viewLatestMemoriesPanel : Language -> List Memory -> Html Msg
 viewLatestMemoriesPanel lang memories =
     let
@@ -134,7 +146,10 @@ viewLatestMemoriesPanel lang memories =
         ]
 
 
+
 -- | Compact memory card with thumbnail photo or a fallback heart icon
+
+
 viewMiniMemory : Memory -> Html Msg
 viewMiniMemory mem =
     div [ class "mini-memory" ]
@@ -151,7 +166,10 @@ viewMiniMemory mem =
         ]
 
 
+
 -- | Shows up to three pending plans, links to the plans page
+
+
 viewPlansPreview : Language -> List CouplePlan -> Html Msg
 viewPlansPreview lang plans =
     let
@@ -173,7 +191,10 @@ viewPlansPreview lang plans =
         ]
 
 
+
 -- | Compact chip showing category and plan title
+
+
 viewPlanChip : CouplePlan -> Html Msg
 viewPlanChip plan =
     div [ class "note-chip" ]
@@ -182,7 +203,10 @@ viewPlanChip plan =
         ]
 
 
+
 -- | Shows memories matching today's day and month from past years, links to the timeline
+
+
 viewOnThisDayPreview : Language -> List Memory -> Html Msg
 viewOnThisDayPreview lang memories =
     a [ class "home-panel home-panel-link today-panel", href (pageUrlFor lang TimelinePage) ]
@@ -198,7 +222,10 @@ viewOnThisDayPreview lang memories =
         ]
 
 
+
 -- | Avatar cards, heart counter, and inline editors for the couple
+
+
 viewCoupleSection : Model -> Html Msg
 viewCoupleSection model =
     section [ class "couple-section" ]
@@ -225,7 +252,10 @@ viewCoupleSection model =
         ]
 
 
+
 -- | Days-together counter, clicking it opens the heart editor
+
+
 viewHeartCounter : Language -> Today -> Status RelationshipData -> String -> Html Msg
 viewHeartCounter lang today relationship heartColor =
     case relationship of
@@ -251,7 +281,10 @@ viewHeartCounter lang today relationship heartColor =
             emptyHeartCounter heartColor
 
 
+
 -- | Placeholder heart shown before a start date is set
+
+
 emptyHeartCounter : String -> Html Msg
 emptyHeartCounter heartColor =
     button [ class ("heart-counter empty-heart " ++ heartColor), type_ "button", onClick OpenHeartEditor ]
@@ -260,7 +293,10 @@ emptyHeartCounter heartColor =
         ]
 
 
+
 -- | Modal for editing the relationship start date and heart color
+
+
 viewHeartEditor : Language -> String -> String -> Html Msg
 viewHeartEditor lang relationshipDate heartColor =
     div [ class "modal-backdrop" ]
@@ -287,7 +323,10 @@ viewHeartEditor lang relationshipDate heartColor =
         ]
 
 
+
 -- | Avatar display card with name, birthday, and edit button
+
+
 viewAvatarCard : Language -> AvatarSide -> AvatarProfile -> Html Msg
 viewAvatarCard lang side avatar =
     div [ class "avatar-card avatar-display-card" ]
@@ -298,7 +337,10 @@ viewAvatarCard lang side avatar =
         ]
 
 
+
 -- | Partner display name, or an empty dot when the name is blank
+
+
 viewAvatarName : String -> Html msg
 viewAvatarName name =
     if String.isEmpty (String.trim name) then
@@ -308,7 +350,10 @@ viewAvatarName name =
         text (String.trim name)
 
 
+
 -- | Birthday date with a zodiac symbol, or a dash if not set
+
+
 viewAvatarBirthday : String -> Html Msg
 viewAvatarBirthday birthday =
     div [ class "avatar-birthday" ]
@@ -322,7 +367,10 @@ viewAvatarBirthday birthday =
         )
 
 
+
 -- | Photo or CSS figure avatar, depending on the display mode setting
+
+
 viewAvatarVisual : AvatarProfile -> Html Msg
 viewAvatarVisual avatar =
     if avatar.mode == "photo" && not (String.isEmpty (String.trim avatar.photo)) then
@@ -332,7 +380,10 @@ viewAvatarVisual avatar =
         viewAvatarFigure avatar
 
 
+
 -- | CSS figure avatar assembled from color, accessory, and expression classes
+
+
 viewAvatarFigure : AvatarProfile -> Html Msg
 viewAvatarFigure avatar =
     div
@@ -349,7 +400,10 @@ viewAvatarFigure avatar =
         ]
 
 
+
 -- | Modal for editing a partner's avatar
+
+
 viewAvatarEditor : Language -> AvatarSide -> AvatarProfile -> Html Msg
 viewAvatarEditor lang side avatar =
     div [ class "modal-backdrop" ]
@@ -367,7 +421,10 @@ viewAvatarEditor lang side avatar =
         ]
 
 
+
 -- | Avatar editor form fields: name, display mode, colors, accessory, expression, and birthday
+
+
 viewAvatarControls : Language -> AvatarSide -> AvatarProfile -> Html Msg
 viewAvatarControls lang side avatar =
     div [ class "avatar-controls" ]
@@ -410,7 +467,10 @@ viewAvatarControls lang side avatar =
         ]
 
 
+
 -- | Reusable labeled select dropdown used throughout the avatar editor
+
+
 avatarSelect : String -> String -> (String -> Msg) -> List ( String, String ) -> Html Msg
 avatarSelect labelText current toMsg options =
     div [ class "field soft-field" ]
@@ -427,9 +487,9 @@ avatarSelect labelText current toMsg options =
 
 
 -- UPCOMING EVENTS
-
-
 -- | Combine important-day and relationship events, keep only the soonest
+
+
 nearestUpcomingEvents : Today -> Status RelationshipData -> List ImportantDay -> List UpcomingEvent
 nearestUpcomingEvents today relationship importantDays =
     let
@@ -442,7 +502,10 @@ nearestUpcomingEvents today relationship importantDays =
     nearestEvents (importantDayEvents ++ relationshipEvents)
 
 
+
 -- | Convert an ImportantDay to a generic UpcomingEvent
+
+
 importantDayUpcomingEvent : ImportantDay -> UpcomingEvent
 importantDayUpcomingEvent day =
     { title = day.title
@@ -452,7 +515,10 @@ importantDayUpcomingEvent day =
     }
 
 
+
 -- | Extract anniversary and monthiversary as UpcomingEvents from backend relationship data
+
+
 relationshipUpcomingEvents : Today -> Status RelationshipData -> List UpcomingEvent
 relationshipUpcomingEvents _ relationship =
     case relationship of
@@ -466,7 +532,10 @@ relationshipUpcomingEvents _ relationship =
             []
 
 
+
 -- | Build one relationship UpcomingEvent from optional backend fields, returns Nothing when the date is missing
+
+
 relationshipEventFromBackend : String -> String -> Maybe String -> Maybe Int -> Maybe Int -> Maybe UpcomingEvent
 relationshipEventFromBackend marker fallbackTitle maybeDate maybeNumber maybeDays =
     Maybe.andThen dateParts maybeDate
@@ -486,7 +555,10 @@ relationshipEventFromBackend marker fallbackTitle maybeDate maybeNumber maybeDay
             )
 
 
+
 -- | Keep only events tied with the minimum daysUntil value
+
+
 nearestEvents : List UpcomingEvent -> List UpcomingEvent
 nearestEvents events =
     case events of
@@ -501,7 +573,10 @@ nearestEvents events =
             List.filter (\event -> event.days == nearestDays) events
 
 
+
 -- | Translate a birthday or anniversary event title to the current language
+
+
 translateUpcomingEventTitle : Language -> UpcomingEvent -> String
 translateUpcomingEventTitle lang event =
     if event.kind == "birthday" then

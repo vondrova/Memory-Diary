@@ -22,6 +22,7 @@ module Api.Codec exposing
 
 Decoders mirror the JSON structures returned by `backend/src/Types.hs`
 Encoders produce the request bodies expected by the same DTOs
+
 -}
 
 import Json.Decode as D
@@ -29,7 +30,9 @@ import Json.Encode as E
 import Types exposing (..)
 
 
+
 -- DECODERS -----------------------------------------------
+
 
 memoryDecoder : D.Decoder Memory
 memoryDecoder =
@@ -99,7 +102,10 @@ statsDecoder =
         |> andMap (D.field "dailyActivity" (D.list pairDecoder))
 
 
+
 -- get one decoder and then map it with a function that takes the result of the decoder and returns a new value (for chaining decoders - more then D.map8 is needed...help from AI)
+
+
 andMap : D.Decoder a -> D.Decoder (a -> b) -> D.Decoder b
 andMap da df =
     D.andThen (\f -> D.map f da) df
@@ -149,7 +155,11 @@ diaryEntryDecoder =
         (D.field "date" D.string)
         (D.field "body" D.string)
 
+
+
 -- geocoding proxy
+
+
 nominatimDecoder : D.Decoder (List String)
 nominatimDecoder =
     D.list nominatimResultDecoder
@@ -188,6 +198,7 @@ nominatimResultDecoder =
             (D.maybe (D.field "house_number" D.string))
             (D.maybe (D.field "city" D.string))
         )
+
 
 
 -- ENCODERS -----------------------------------------------
@@ -269,6 +280,7 @@ encodeRelationshipInput startDate heartColor =
                 [ ( "startDate", E.string (startDate ++ "T00:00:00Z") ) ]
     in
     E.object (dateFields ++ [ ( "heartColor", E.string heartColor ) ])
+
 
 encodeDiaryForm : DiaryForm -> E.Value
 encodeDiaryForm form =

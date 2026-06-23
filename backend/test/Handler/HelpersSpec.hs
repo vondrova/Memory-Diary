@@ -10,7 +10,6 @@
 --   * extractName  — extracts a human-readable label from a raw JSON trash
 --                      payload (looks for "title" then "name"; falls back
 --                      to an em-dash for malformed payloads)
-
 module Handler.HelpersSpec (spec) where
 
 import Data.Text (Text)

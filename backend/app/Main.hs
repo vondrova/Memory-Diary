@@ -1,5 +1,5 @@
-{-# LANGUAGE DataKinds #-} 
-{-# LANGUAGE OverloadedStrings #-}  
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Main (main) where
@@ -34,35 +34,23 @@ import Api
     tagApi,
     trashApi,
   )
-
-
 -- PostgreSQL connection pool and schema migration runner from the Persistent library
-import Database.Persist.Postgresql (createPostgresqlPool, runMigration)
-import Database.Persist.Sql (runSqlPool)
 
 -- Suppress migration log noise
 import Control.Monad.Logger (runNoLoggingT)
 -- Inject the DB pool into each request handler
 import Control.Monad.Reader (runReaderT)
-
 -- Converts the DATABASE_URL string to ByteString
 import Data.ByteString.Char8 (pack)
 -- supplies defaults for missing env vars
 import Data.Maybe (fromMaybe)
-
+import Database.Persist.Postgresql (createPostgresqlPool, runMigration)
+import Database.Persist.Sql (runSqlPool)
 -- Relationship and profile handlers (partner setup, profile config)
-import Handler.Relationship (profileServer, relationshipServer)
 
 -- Database schema and catalog sync functions
-import Models (migrateAll, syncCatalogValues)
 
 -- WAI and Warp for HTTP server, static file serving, and middleware
-import Network.HTTP.Types.Header (ResponseHeaders, hCacheControl, hExpires)
-import Network.Wai (mapResponseHeaders)
-import qualified Network.Wai as Wai
-import Network.Wai.Application.Static (defaultWebAppSettings, staticApp)
-import Network.Wai.Handler.Warp (run)
-import Servant
 
 -- HTTP handler implementations, imported directly from each feature module
 import Handler.Diary (diaryServer)
@@ -72,16 +60,21 @@ import Handler.Memories (memoryServer)
 import Handler.Notes (noteServer)
 import Handler.Photos (initPhotosDir, photosApp, uploadPhotos)
 import Handler.Plans (planServer)
+import Handler.Relationship (profileServer, relationshipServer)
 import Handler.Stats (statsServer)
 import Handler.Tags (locationServer, planCategoryServer, tagServer)
 import Handler.Trash (trashServer)
-
+import Models (migrateAll, syncCatalogValues)
+import Network.HTTP.Types.Header (ResponseHeaders, hCacheControl, hExpires)
+import Network.Wai (mapResponseHeaders)
+import qualified Network.Wai as Wai
+import Network.Wai.Application.Static (defaultWebAppSettings, staticApp)
+import Network.Wai.Handler.Warp (run)
+import Servant
 -- Reads DATABASE_URL, STATIC_PATH, PHOTOS_PATH and PORT from the process env
 import System.Environment (lookupEnv)
-
 -- Parses the PORT env var string to Int without throwing exceptions on invalid input
 import Text.Read (readMaybe)
-
 -- Lets us set index.html as the default file for directory requests
 import WaiAppStatic.Types (StaticSettings (..), unsafeToPiece)
 
@@ -104,10 +97,9 @@ type FullApi =
     :<|> "photos" :> Raw
     :<|> Raw
 
-
 main :: IO ()
 main = do
-    -- Read env vars with defaults: Postgres URL, static file path, photos path, and server port
+  -- Read env vars with defaults: Postgres URL, static file path, photos path, and server port
   databaseUrl <- fromMaybe "postgresql://memory_diary:memory_diary@localhost:5432/memory_diary" <$> lookupEnv "DATABASE_URL"
   staticPath <- fromMaybe "../frontend" <$> lookupEnv "STATIC_PATH"
   photosPath <- fromMaybe "../photos" <$> lookupEnv "PHOTOS_PATH"
@@ -122,8 +114,7 @@ main = do
   runSqlPool syncCatalogValues pool
 
   -- Build the Servant application by wiring each sub-API to its handler server via 'hoistServer'
-  let 
-      settings =
+  let settings =
         (defaultWebAppSettings staticPath)
           { ssIndices = [unsafeToPiece "index.html"]
           }

@@ -11,7 +11,6 @@
 --   * 'Handler.PhotosSpec'     — photo filename safety checks
 --   * 'Handler.IntegrationSpec'— end-to-end API tests against a real PostgreSQL database
 --   * 'TypesSpec'              — JSON round-trip tests for all public DTOs
-
 module Main (main) where
 
 import qualified Domain.AggregationSpec

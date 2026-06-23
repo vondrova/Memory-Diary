@@ -7,13 +7,15 @@ has the expected fields. This catches regressions when the backend changes its
 response shape or a new decoder field is added.
 
 Covered decoders:
-  - `memoryDecoder`       — full memory row (title, tags, photos, optional fields)
+
+  - `memoryDecoder` — full memory row (title, tags, photos, optional fields)
   - `importantDayDecoder` — birthday and manual day rows
-  - `noteDecoder`         — couple note with stable owner key
-  - `statsDecoder`        — aggregated statistics (counts, top lists, nullable title)
-  - `diaryEntryDecoder`   — personal diary entry (id, owner, date, body)
-  - `profileDecoder`      — person profile (side, name, display mode, optional photo)
+  - `noteDecoder` — couple note with stable owner key
+  - `statsDecoder` — aggregated statistics (counts, top lists, nullable title)
+  - `diaryEntryDecoder` — personal diary entry (id, owner, date, body)
+  - `profileDecoder` — person profile (side, name, display mode, optional photo)
   - `relationshipDecoder` — relationship row with computed countdown fields
+
 -}
 
 import Api.Codec exposing (diaryEntryDecoder, importantDayDecoder, memoryDecoder, noteDecoder, profileDecoder, relationshipDecoder, statsDecoder)

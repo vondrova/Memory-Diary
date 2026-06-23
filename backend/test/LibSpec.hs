@@ -2,17 +2,17 @@ module LibSpec (spec) where
 
 import Data.Text (pack)
 import Data.Time.Calendar (diffDays, fromGregorian)
-import Test.Hspec
 import Lib
-  ( computeNextOccurrence
-  , computeStats
-  , durMins
-  , joinComma
-  , monthDay
-  , parseDay
-  , splitComma
-  , topN
+  ( computeNextOccurrence,
+    computeStats,
+    durMins,
+    joinComma,
+    monthDay,
+    parseDay,
+    splitComma,
+    topN,
   )
+import Test.Hspec
 
 spec :: Spec
 spec = do
@@ -66,42 +66,42 @@ spec = do
 
   describe "computeNextOccurrence" $ do
     it "returns this year when anniversary is still upcoming" $ do
-      let today              = fromGregorian 2024 6 1
+      let today = fromGregorian 2024 6 1
       let (next, days, m, d) = computeNextOccurrence today "2020-12-25"
       next `shouldBe` "2024-12-25"
       days `shouldSatisfy` (> 0)
-      m    `shouldBe` 12
-      d    `shouldBe` 25
+      m `shouldBe` 12
+      d `shouldBe` 25
 
     it "returns next year when anniversary has already passed" $ do
-      let today              = fromGregorian 2024 6 15
+      let today = fromGregorian 2024 6 15
       let (next, days, m, d) = computeNextOccurrence today "2020-06-01"
       next `shouldBe` "2025-06-01"
       days `shouldSatisfy` (> 0)
-      m    `shouldBe` 6
-      d    `shouldBe` 1
+      m `shouldBe` 6
+      d `shouldBe` 1
 
     it "returns today with 0 days when anniversary is today" $ do
-      let today              = fromGregorian 2024 6 15
+      let today = fromGregorian 2024 6 15
       let (next, days, _, _) = computeNextOccurrence today "2020-06-15"
       next `shouldBe` "2024-06-15"
       days `shouldBe` 0
 
     it "handles a December anniversary when today is January" $ do
-      let today              = fromGregorian 2024 1 5
+      let today = fromGregorian 2024 1 5
       let (next, days, m, d) = computeNextOccurrence today "2019-12-31"
       next `shouldBe` "2024-12-31"
       days `shouldSatisfy` (> 0)
-      m    `shouldBe` 12
-      d    `shouldBe` 31
+      m `shouldBe` 12
+      d `shouldBe` 31
 
     it "returns fallback for unparseable date" $ do
-      let today              = fromGregorian 2024 1 1
+      let today = fromGregorian 2024 1 1
       let (next, days, m, d) = computeNextOccurrence today "not-a-date"
       next `shouldBe` "not-a-date"
       days `shouldBe` 0
-      m    `shouldBe` 0
-      d    `shouldBe` 0
+      m `shouldBe` 0
+      d `shouldBe` 0
 
   describe "parseDay" $ do
     it "parses a valid ISO date" $
@@ -119,12 +119,12 @@ spec = do
   describe "days together (diffDays)" $ do
     it "computes 366 days between two dates one year apart (leap year)" $ do
       let start = fromGregorian 2023 6 15
-      let end   = fromGregorian 2024 6 15
+      let end = fromGregorian 2024 6 15
       diffDays end start `shouldBe` 366
 
     it "computes 365 days for a non-leap year" $ do
       let start = fromGregorian 2022 6 15
-      let end   = fromGregorian 2023 6 15
+      let end = fromGregorian 2023 6 15
       diffDays end start `shouldBe` 365
 
     it "computes 0 days for same date" $ do
@@ -150,46 +150,50 @@ spec = do
   describe "computeStats" $ do
     it "returns zero stats for empty list" $ do
       let s = computeStats []
-      statsTotalMinutes s   `shouldBe` 0
-      statsMemoryCount s    `shouldBe` 0
-      statsPhotoCount s     `shouldBe` 0
-      statsVisitedPlaces s  `shouldBe` 0
+      statsTotalMinutes s `shouldBe` 0
+      statsMemoryCount s `shouldBe` 0
+      statsPhotoCount s `shouldBe` 0
+      statsVisitedPlaces s `shouldBe` 0
       statsAverageMinutes s `shouldBe` 0
 
     it "counts memories correctly" $ do
-      let mems = [ makeMemory 1 "A" "2024-06-01T10:00" "2024-06-01T11:00" Nothing [] []
-                 , makeMemory 2 "B" "2024-06-02T10:00" "2024-06-02T12:00" Nothing [] []
-                 ]
+      let mems =
+            [ makeMemory 1 "A" "2024-06-01T10:00" "2024-06-01T11:00" Nothing [] [],
+              makeMemory 2 "B" "2024-06-02T10:00" "2024-06-02T12:00" Nothing [] []
+            ]
       statsMemoryCount (computeStats mems) `shouldBe` 2
 
     it "sums total minutes across memories" $ do
-      let mems = [ makeMemory 1 "A" "2024-06-01T10:00" "2024-06-01T11:00" Nothing [] []
-                 , makeMemory 2 "B" "2024-06-02T10:00" "2024-06-02T12:00" Nothing [] []
-                 ]
+      let mems =
+            [ makeMemory 1 "A" "2024-06-01T10:00" "2024-06-01T11:00" Nothing [] [],
+              makeMemory 2 "B" "2024-06-02T10:00" "2024-06-02T12:00" Nothing [] []
+            ]
       statsTotalMinutes (computeStats mems) `shouldBe` 180
 
     it "counts unique locations" $ do
-      let mems = [ makeMemory 1 "A" "2024-06-01T10:00" "2024-06-01T11:00" (Just "Praha") [] []
-                 , makeMemory 2 "B" "2024-06-02T10:00" "2024-06-02T11:00" (Just "Brno") [] []
-                 , makeMemory 3 "C" "2024-06-03T10:00" "2024-06-03T11:00" (Just "Praha") [] []
-                 ]
+      let mems =
+            [ makeMemory 1 "A" "2024-06-01T10:00" "2024-06-01T11:00" (Just "Praha") [] [],
+              makeMemory 2 "B" "2024-06-02T10:00" "2024-06-02T11:00" (Just "Brno") [] [],
+              makeMemory 3 "C" "2024-06-03T10:00" "2024-06-03T11:00" (Just "Praha") [] []
+            ]
       statsVisitedPlaces (computeStats mems) `shouldBe` 2
 
     it "counts total photos" $ do
-      let mems = [ makeMemory 1 "A" "2024-06-01T10:00" "2024-06-01T11:00" Nothing [] ["p1.jpg", "p2.jpg"]
-                 , makeMemory 2 "B" "2024-06-02T10:00" "2024-06-02T11:00" Nothing [] ["p3.jpg"]
-                 ]
+      let mems =
+            [ makeMemory 1 "A" "2024-06-01T10:00" "2024-06-01T11:00" Nothing [] ["p1.jpg", "p2.jpg"],
+              makeMemory 2 "B" "2024-06-02T10:00" "2024-06-02T11:00" Nothing [] ["p3.jpg"]
+            ]
       statsPhotoCount (computeStats mems) `shouldBe` 3
 
-
 makeMemory :: Int -> String -> String -> String -> Maybe String -> [String] -> [String] -> Memory
-makeMemory i t from to loc tags photos = Memory
-  { memoryId          = i
-  , memoryTitle       = t
-  , memoryTimeFrom    = from
-  , memoryTimeTo      = to
-  , memoryDescription = Nothing
-  , memoryLocation    = loc
-  , memoryTags        = tags
-  , memoryPhotos      = photos
-  }
+makeMemory i t from to loc tags photos =
+  Memory
+    { memoryId = i,
+      memoryTitle = t,
+      memoryTimeFrom = from,
+      memoryTimeTo = to,
+      memoryDescription = Nothing,
+      memoryLocation = loc,
+      memoryTags = tags,
+      memoryPhotos = photos
+    }

@@ -3,17 +3,20 @@ module Page.Calendar exposing (viewCalendar)
 {-| Calendar page with a month grid, memories, and important days
 -}
 
-import Utils.DateUtils exposing (calendarWeeks, dayKey, monthName)
-import Utils.Helpers exposing (countdownShort, displayImportantDayTitle, importantDaysOnCalendarDay, memoriesOnDay)
 import Html exposing (Html, button, div, h2, h3, p, span, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Language exposing (tr)
 import Page.Timeline exposing (viewMemoryCard)
 import Types exposing (..)
+import Utils.DateUtils exposing (calendarWeeks, dayKey, monthName)
+import Utils.Helpers exposing (countdownShort, displayImportantDayTitle, importantDaysOnCalendarDay, memoriesOnDay)
+
 
 
 -- | Root calendar view: header with month navigation, the week grid, and the selected-day detail panel
+
+
 viewCalendar : Model -> Html Msg
 viewCalendar model =
     let
@@ -34,7 +37,9 @@ viewCalendar model =
                     []
 
         weeks =
-            calendarWeeks model.calYear model.calMonth -- list of weeks, each week is a list of Maybe Int (Nothing = padding cell)
+            calendarWeeks model.calYear model.calMonth
+
+        -- list of weeks, each week is a list of Maybe Int (Nothing = padding cell)
     in
     div [ class "calendar-page" ]
         [ div [ class "cal-header" ]
@@ -88,7 +93,10 @@ viewCalendar model =
         ]
 
 
+
 -- | Render one cell in the month grid. Nothing = empty padding cell before the first day of the month
+
+
 viewCalDay : Language -> Today -> Int -> Int -> List Memory -> List ImportantDay -> Maybe String -> Maybe Int -> Html Msg
 viewCalDay lang today calY calM mems importantDays selectedDay mDay =
     case mDay of
@@ -165,7 +173,10 @@ viewCalDay lang today calY calM mems importantDays selectedDay mDay =
                 ]
 
 
+
 -- | Render an important day card in the selected-day detail panel
+
+
 viewCalendarImportantDay : Language -> Today -> ImportantDay -> Html Msg
 viewCalendarImportantDay lang _ ann =
     let

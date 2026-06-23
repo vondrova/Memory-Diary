@@ -10,7 +10,6 @@
 --   * computeStats       — full aggregation over a list of 'MemoryRow's
 --                            (total duration, tag counts, location counts,
 --                            visited-place count, monthly activity breakdown)
-
 module Domain.AggregationSpec (spec) where
 
 import Data.Text (Text)

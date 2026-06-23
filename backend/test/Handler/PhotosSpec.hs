@@ -7,7 +7,6 @@
 --   * safeStoredPhotoName  — accepts filenames that look like stored uploads
 --                              (UUID + safe extension); rejects directory traversal,
 --                              URL-like strings, and other unsafe patterns
-
 module Handler.PhotosSpec (spec) where
 
 import Handler.Photos (safePhotoExtension, safeStoredPhotoName)

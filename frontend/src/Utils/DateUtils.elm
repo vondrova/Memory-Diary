@@ -6,7 +6,10 @@ module Utils.DateUtils exposing (..)
 import Types exposing (Language(..), Today)
 
 
+
 -- | Number of days in a month, with leap-year handling for February
+
+
 daysInMonth : Int -> Int -> Int
 daysInMonth year month =
     case month of
@@ -33,7 +36,10 @@ daysInMonth year month =
             31
 
 
+
 -- | Weekday as 0 (Sunday) … 6 (Saturday), using Sakamoto's compact algorithm
+
+
 dayOfWeek : Int -> Int -> Int -> Int
 dayOfWeek y m d =
     let
@@ -53,13 +59,19 @@ dayOfWeek y m d =
     modBy 7 (y2 + y2 // 4 - y2 // 100 + y2 // 400 + ti + d)
 
 
+
 -- | Weekday shift: 0 = Monday, used to align calendar grid columns
+
+
 mondayFirst : Int -> Int -> Int -> Int
 mondayFirst y m d =
     modBy 7 (dayOfWeek y m d + 6)
 
 
+
 -- | Month grid: a list of weeks, each week a list of Maybe Int (Nothing = padding cell)
+
+
 calendarWeeks : Int -> Int -> List (List (Maybe Int))
 calendarWeeks year month =
     let
@@ -94,7 +106,10 @@ calendarWeeks year month =
     splitEvery 7 cells
 
 
+
 -- | Split a list into chunks of n elements
+
+
 splitEvery : Int -> List a -> List (List a)
 splitEvery n list =
     if List.isEmpty list then
@@ -104,7 +119,10 @@ splitEvery n list =
         List.take n list :: splitEvery n (List.drop n list)
 
 
+
 -- | Return (year, month) for the month before the given one
+
+
 prevMonth : Int -> Int -> ( Int, Int )
 prevMonth y m =
     if m == 1 then
@@ -114,7 +132,10 @@ prevMonth y m =
         ( y, m - 1 )
 
 
+
 -- | Return (year, month) for the month after the given one
+
+
 nextMonth : Int -> Int -> ( Int, Int )
 nextMonth y m =
     if m == 12 then
@@ -124,7 +145,10 @@ nextMonth y m =
         ( y, m + 1 )
 
 
+
 -- | Localized full month name for the calendar header
+
+
 monthName : Language -> Int -> String
 monthName lang m =
     case lang of
@@ -211,7 +235,10 @@ monthName lang m =
                     ""
 
 
+
 -- | Convert a Julian day number back to a Gregorian { year, month, day } record
+
+
 fromJulian : Int -> { year : Int, month : Int, day : Int }
 fromJulian jdn =
     let
@@ -239,7 +266,10 @@ fromJulian jdn =
     }
 
 
+
 -- | Format a date as "YYYY-MM-DD", used as a Dict key and for filter comparisons
+
+
 dayKey : Int -> Int -> Int -> String
 dayKey y m d =
     String.padLeft 4 '0' (String.fromInt y)
@@ -249,7 +279,10 @@ dayKey y m d =
         ++ String.padLeft 2 '0' (String.fromInt d)
 
 
+
 -- | Parse a "YYYY-MM-DD" string into { year, month, day }. returns Nothing on failure
+
+
 dateParts : String -> Maybe Today
 dateParts s =
     let
@@ -270,7 +303,10 @@ dateParts s =
             Nothing
 
 
--- | Convert a Gregorian date to a Julian day number for date arithmetic 
+
+-- | Convert a Gregorian date to a Julian day number for date arithmetic
+
+
 toJulian : Int -> Int -> Int -> Int
 toJulian y m d =
     let

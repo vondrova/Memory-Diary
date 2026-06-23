@@ -11,7 +11,7 @@ where
 
 import Control.Applicative ((<|>)) -- for trying multiple parse formats in parseUtcTime
 import Data.Text (Text)
-import qualified Data.Text as T 
+import qualified Data.Text as T
 import Data.Time
 import Types
 
@@ -50,7 +50,7 @@ matchesFilters mq mtag mloc mfrom mto mem =
   checkQ && checkTag && checkLoc && checkFrom && checkTo
   where
     lower = T.toLower -- case-insensitive matching
-    checkQ = case mq of -- free-text search across title and description 
+    checkQ = case mq of -- free-text search across title and description
       Nothing -> True
       Just q ->
         T.isInfixOf (lower q) (lower (mrTitle mem)) -- search in title

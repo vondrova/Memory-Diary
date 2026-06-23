@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- | Geocoding proxy handler for api geocode 
+-- | Geocoding proxy handler for api geocode
 --
 -- Forwards search queries to the Nominatim API and returns the raw JSON result
 module Handler.Geocode
@@ -10,17 +10,17 @@ module Handler.Geocode
 where
 
 import qualified Api
-import Handler.Helpers (AppM)
 import Control.Exception (SomeException, try)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL -- for decoding the JSON response from Nominatim
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import qualified Data.Text as T 
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE -- converts Text to ByteString (required by urlEncode) and back
+import Handler.Helpers (AppM)
 import Network.HTTP.Simple (Response, getResponseBody, httpLBS, parseRequest, setRequestHeader) -- for making the HTTP request to Nominatim
-import Network.HTTP.Types.URI (urlEncode) -- for encoding the search query in the URL 
+import Network.HTTP.Types.URI (urlEncode) -- for encoding the search query in the URL
 import Servant (ServerT)
 
 -- | Servant server for the geocode proxy endpoint

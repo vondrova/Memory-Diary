@@ -13,6 +13,7 @@ import Url exposing (Url)
 
 -- PAGES & NAVIGATION -----------------------------------------------
 
+
 type Page
     = HomePage
     | TimelinePage
@@ -28,7 +29,9 @@ type alias Today =
     { year : Int, month : Int, day : Int }
 
 
+
 -- DOMAIN TYPES -----------------------------------------------
+
 
 type alias Memory =
     { id : Int
@@ -88,14 +91,19 @@ type alias Stats =
     }
 
 
+
 -- | Three-state async wrapper used for every remote data field in the model
+
+
 type Status a
     = Loading
     | Loaded a
     | Failed String
 
 
+
 -- FORM TYPES -----------------------------------------------
+
 
 type alias Filter =
     { q : String
@@ -162,7 +170,9 @@ type alias CategoryForm =
     }
 
 
+
 -- UI STATE TYPES -----------------------------------------------
+
 
 type AvatarSide
     = LeftAvatar
@@ -279,7 +289,9 @@ type alias DiaryForm =
     }
 
 
+
 -- MODEL -----------------------------------------------
+
 
 type alias Model =
     { key : Nav.Key
@@ -338,7 +350,9 @@ type alias Model =
     }
 
 
+
 -- MSG -----------------------------------------------
+
 
 type Msg
     = LinkClicked Browser.UrlRequest
