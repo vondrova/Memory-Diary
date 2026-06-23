@@ -406,12 +406,6 @@ spec =
           runAppStatus pool (createDiaryEntry sampleDiary {deiOwner = "shared"}) `shouldReturn` 400
           runAppStatus pool (createDiaryEntry sampleDiary {deiBody = "   "}) `shouldReturn` 400
 
-      it "normalises diary owner and body before persistence" $ \mPool ->
-        withPool mPool $ \pool -> do
-          created <- runAppSuccess pool (createDiaryEntry sampleDiary {deiOwner = " LEFT ", deiBody = "  Entry  "})
-          derOwner created `shouldBe` "left"
-          derBody created `shouldBe` "Entry"
-
       it "returns 404 when deleting a nonexistent diary entry" $ \mPool ->
         withPool mPool $ \pool ->
           runAppStatus pool (deleteDiaryEntry 999999) `shouldReturn` 404

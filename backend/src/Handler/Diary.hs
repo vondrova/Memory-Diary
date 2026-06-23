@@ -20,6 +20,7 @@ import Control.Monad (when)
 import Control.Monad.IO.Class (liftIO)
 import Data.Time (UTCTime, getCurrentTime, utctDay)
 import Database.Persist
+import Domain.Validation (validateDiaryInputFields)
 import Handler.Helpers
 import Models
 import Servant
@@ -38,14 +39,16 @@ listDiaryEntries = do
 -- | Create a new diary entry and return the persisted row
 createDiaryEntry :: DiaryInput -> AppM DiaryRow
 createDiaryEntry input = do
-  guardNotFuture (deiDate input) -- reject future dates
+  validateInput (validateDiaryInputFields input)
+  guardNotFuture (deiDate input)
   entryId <- runDb (insert (diaryDbFromInput input))
   getDiaryEntry (toIntKey entryId)
 
 -- | Replace all fields of an existing diary entry
 updateDiaryEntry :: Int -> DiaryInput -> AppM NoContent
 updateDiaryEntry rawId input = do
-  guardNotFuture (deiDate input) -- reject future dates
+  validateInput (validateDiaryInputFields input)
+  guardNotFuture (deiDate input)
   let entryId = fromIntKey rawId :: DiaryEntryDbId
   existing <- runDb (get entryId) -- check that the entry exists before attempting to update
   case existing of
