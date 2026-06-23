@@ -15,7 +15,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Lib (startApp) where
+module Lib (startApp, durMins, topN, splitComma, joinComma) where
 
 import Control.Monad (zipWithM)
 import Control.Monad.IO.Class (liftIO)
@@ -23,10 +23,13 @@ import Control.Monad.Logger (runNoLoggingT)
 import Control.Monad.Reader (ReaderT, ask, runReaderT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString.Char8 (pack)
-import Data.Maybe (fromMaybe)
+import Data.List (group, maximumBy, nub, sort, sortBy)
+import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Ord (Down (..), comparing)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Time (formatTime, getCurrentTime, defaultTimeLocale)
+import Data.Time (UTCTime, diffUTCTime, formatTime, getCurrentTime)
+import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Database.Persist
 import Database.Persist.Postgresql
 import Database.Persist.TH
@@ -118,7 +121,7 @@ type MemoryAPI =
 
 type PhotoAPI = "api" :> "photos" :> MultipartForm Tmp (MultipartData Tmp) :> Post '[JSON] [String]
 
-type FullAPI = MemoryAPI :<|> PhotoAPI :<|> "photos" :> Raw
+type FullAPI = MemoryAPI :<|> StatsAPI :<|> PhotoAPI :<|> "photos" :> Raw
 
 memoryServer :: ServerT MemoryAPI AppM
 memoryServer =
@@ -197,6 +200,73 @@ deleteMemory memId = do
       runDB $ delete key
       return NoContent
 
+data Stats = Stats
+  { statsTotalMinutes    :: Int
+  , statsMemoryCount     :: Int
+  , statsPhotoCount      :: Int
+  , statsVisitedPlaces   :: Int
+  , statsAverageMinutes  :: Int
+  , statsLongestTitle    :: Maybe String
+  , statsLongestMinutes  :: Int
+  , statsTopTags         :: [(String, Int)]
+  , statsTopLocations    :: [(String, Int)]
+  , statsMonthlyActivity :: [(String, Int)]
+  , statsDailyActivity   :: [(String, Int)]
+  } deriving (Show, Generic)
+
+instance FromJSON Stats
+instance ToJSON Stats
+
+type StatsAPI = "api" :> "stats" :> Get '[JSON] Stats
+
+getStats :: AppM Stats
+getStats = do
+  entities <- runDB $ selectList [] []
+  return $ computeStats (map toMemory entities)
+
+computeStats :: [Memory] -> Stats
+computeStats mems = Stats
+  { statsTotalMinutes    = totalMins
+  , statsMemoryCount     = length mems
+  , statsPhotoCount      = sum (map (length . memoryPhotos) mems)
+  , statsVisitedPlaces   = length (nub (mapMaybe memoryLocation mems))
+  , statsAverageMinutes  = if null mems then 0 else totalMins `div` length mems
+  , statsLongestTitle    = memoryTitle <$> safeLongest
+  , statsLongestMinutes  = maybe 0 (\m -> durMins (memoryTimeFrom m) (memoryTimeTo m)) safeLongest
+  , statsTopTags         = topN 10 (concatMap memoryTags mems)
+  , statsTopLocations    = topN 10 (mapMaybe memoryLocation mems)
+  , statsMonthlyActivity = activityBy (take 7 . memoryTimeFrom) mems
+  , statsDailyActivity   = activityBy (take 10 . memoryTimeFrom) mems
+  }
+  where
+    durations   = map (\m -> durMins (memoryTimeFrom m) (memoryTimeTo m)) mems
+    totalMins   = sum durations
+    safeLongest
+      | null mems = Nothing
+      | otherwise = Just $ fst $ maximumBy (comparing snd) (zip mems durations)
+
+parseDT :: String -> Maybe UTCTime
+parseDT s = parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M" s
+
+durMins :: String -> String -> Int
+durMins from to = fromMaybe 0 $ do
+  t1 <- parseDT from
+  t2 <- parseDT to
+  return $ max 0 $ round (diffUTCTime t2 t1 / 60)
+
+topN :: Int -> [String] -> [(String, Int)]
+topN n xs =
+  take n
+  $ sortBy (comparing (Down . snd))
+  $ map (\g -> (head g, length g))
+  $ group (sort xs)
+
+activityBy :: (Memory -> String) -> [Memory] -> [(String, Int)]
+activityBy f mems =
+  sortBy (comparing fst)
+  $ map (\g -> (head g, length g))
+  $ group (sort (map f mems))
+
 photosDir :: FilePath
 photosDir = "photos"
 
@@ -217,7 +287,8 @@ uploadPhotos multipartData = liftIO $ do
 app :: ConnectionPool -> Application
 app pool =
   serve (Proxy :: Proxy FullAPI) $
-    hoistServer (Proxy :: Proxy MemoryAPI) (`runReaderT` pool) memoryServer
+    hoistServer (Proxy :: Proxy MemoryAPI)   (`runReaderT` pool) memoryServer
+    :<|> hoistServer (Proxy :: Proxy StatsAPI) (`runReaderT` pool) getStats
     :<|> uploadPhotos
     :<|> Tagged (staticApp (defaultWebAppSettings photosDir))
 
