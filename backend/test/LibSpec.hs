@@ -1,8 +1,9 @@
 module LibSpec (spec) where
 
 import Data.Text (pack)
+import Data.Time.Calendar (fromGregorian)
 import Test.Hspec
-import Lib (durMins, joinComma, splitComma, topN)
+import Lib (computeNextOccurrence, durMins, joinComma, splitComma, topN)
 
 spec :: Spec
 spec = do
@@ -38,3 +39,34 @@ spec = do
 
     it "handles a single item" $
       splitComma (joinComma ["solo"]) `shouldBe` ["solo"]
+
+  describe "computeNextOccurrence" $ do
+    it "returns this year when anniversary is still upcoming" $ do
+      let today        = fromGregorian 2024 6 1
+      let (next, days, m, d) = computeNextOccurrence today "2020-12-25"
+      next `shouldBe` "2024-12-25"
+      days `shouldSatisfy` (> 0)
+      m    `shouldBe` 12
+      d    `shouldBe` 25
+
+    it "returns next year when anniversary has already passed" $ do
+      let today        = fromGregorian 2024 6 15
+      let (next, days, m, d) = computeNextOccurrence today "2020-06-01"
+      next `shouldBe` "2025-06-01"
+      days `shouldSatisfy` (> 0)
+      m    `shouldBe` 6
+      d    `shouldBe` 1
+
+    it "returns today with 0 days when anniversary is today" $ do
+      let today        = fromGregorian 2024 6 15
+      let (next, days, _, _) = computeNextOccurrence today "2020-06-15"
+      next `shouldBe` "2024-06-15"
+      days `shouldBe` 0
+
+    it "returns fallback for unparseable date" $ do
+      let today = fromGregorian 2024 1 1
+      let (next, days, m, d) = computeNextOccurrence today "not-a-date"
+      next `shouldBe` "not-a-date"
+      days `shouldBe` 0
+      m    `shouldBe` 0
+      d    `shouldBe` 0

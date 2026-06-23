@@ -15,7 +15,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Lib (startApp, durMins, topN, splitComma, joinComma) where
+module Lib (startApp, durMins, topN, splitComma, joinComma, computeNextOccurrence) where
 
 import Control.Monad (zipWithM)
 import Control.Monad.IO.Class (liftIO)
@@ -28,7 +28,8 @@ import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Ord (Down (..), comparing)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Time (UTCTime, diffUTCTime, formatTime, getCurrentTime)
+import Data.Time (UTCTime, diffUTCTime, formatTime, getCurrentTime, utctDay)
+import Data.Time.Calendar (Day, diffDays, fromGregorian, toGregorian)
 import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Database.Persist
 import Database.Persist.Postgresql
@@ -52,6 +53,13 @@ MemoryDb
   location    Text Maybe
   tags        Text
   photos      Text
+  deriving Show
+
+ImportantDayDb
+  title Text
+  date  Text
+  note  Text Maybe
+  kind  Text
   deriving Show
 |]
 
@@ -121,7 +129,7 @@ type MemoryAPI =
 
 type PhotoAPI = "api" :> "photos" :> MultipartForm Tmp (MultipartData Tmp) :> Post '[JSON] [String]
 
-type FullAPI = MemoryAPI :<|> StatsAPI :<|> PhotoAPI :<|> "photos" :> Raw
+type FullAPI = MemoryAPI :<|> ImportantDayAPI :<|> StatsAPI :<|> PhotoAPI :<|> "photos" :> Raw
 
 memoryServer :: ServerT MemoryAPI AppM
 memoryServer =
@@ -193,6 +201,123 @@ updateMemory memId input = do
 deleteMemory :: Int -> AppM NoContent
 deleteMemory memId = do
   let key = toSqlKey (fromIntegral memId) :: Key MemoryDb
+  existing <- runDB $ get key
+  case existing of
+    Nothing -> throwError err404
+    Just _  -> do
+      runDB $ delete key
+      return NoContent
+
+data ImportantDay = ImportantDay
+  { importantDayId             :: Maybe Int
+  , importantDayTitle          :: String
+  , importantDayDate           :: String
+  , importantDayNote           :: Maybe String
+  , importantDayKind           :: String
+  , importantDayNextOccurrence :: String
+  , importantDayDaysUntil      :: Int
+  , importantDayMonth          :: Int
+  , importantDayDay            :: Int
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON ImportantDay
+instance ToJSON ImportantDay
+
+data ImportantDayInput = ImportantDayInput
+  { importantDayInputTitle :: String
+  , importantDayInputDate  :: String
+  , importantDayInputNote  :: Maybe String
+  , importantDayInputKind  :: String
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON ImportantDayInput
+instance ToJSON ImportantDayInput
+
+parseDay :: String -> Maybe Day
+parseDay = parseTimeM True defaultTimeLocale "%Y-%m-%d"
+
+formatDay :: Day -> String
+formatDay = formatTime defaultTimeLocale "%Y-%m-%d"
+
+computeNextOccurrence :: Day -> String -> (String, Int, Int, Int)
+computeNextOccurrence today dateStr =
+  case parseDay dateStr of
+    Nothing -> (dateStr, 0, 0, 0)
+    Just d  ->
+      let (_, m, dd)    = toGregorian d
+          (yr, _, _)    = toGregorian today
+          thisYearDate  = fromGregorian yr m dd
+          nextDate      = if today <= thisYearDate then thisYearDate
+                          else fromGregorian (yr + 1) m dd
+          days          = fromIntegral (diffDays nextDate today)
+      in (formatDay nextDate, days, fromIntegral m, fromIntegral dd)
+
+toImportantDay :: Day -> Entity ImportantDayDb -> ImportantDay
+toImportantDay today (Entity key db) =
+  let (nextOcc, days, month, day) = computeNextOccurrence today (T.unpack (importantDayDbDate db))
+  in ImportantDay
+    { importantDayId             = Just (fromIntegral (fromSqlKey key))
+    , importantDayTitle          = T.unpack (importantDayDbTitle db)
+    , importantDayDate           = T.unpack (importantDayDbDate db)
+    , importantDayNote           = T.unpack <$> importantDayDbNote db
+    , importantDayKind           = T.unpack (importantDayDbKind db)
+    , importantDayNextOccurrence = nextOcc
+    , importantDayDaysUntil      = days
+    , importantDayMonth          = month
+    , importantDayDay            = day
+    }
+
+type ImportantDayAPI =
+       "api" :> "important-days" :> Get '[JSON] [ImportantDay]
+  :<|> "api" :> "important-days" :> ReqBody '[JSON] ImportantDayInput :> Post '[JSON] ImportantDay
+  :<|> "api" :> "important-days" :> Capture "id" Int :> ReqBody '[JSON] ImportantDayInput :> Put '[JSON] ImportantDay
+  :<|> "api" :> "important-days" :> Capture "id" Int :> Delete '[JSON] NoContent
+
+importantDayServer :: ServerT ImportantDayAPI AppM
+importantDayServer =
+       getImportantDays
+  :<|> createImportantDay
+  :<|> updateImportantDay
+  :<|> deleteImportantDay
+
+getImportantDays :: AppM [ImportantDay]
+getImportantDays = do
+  today    <- liftIO $ utctDay <$> getCurrentTime
+  entities <- runDB $ selectList [] [Asc ImportantDayDbDate]
+  return $ map (toImportantDay today) entities
+
+createImportantDay :: ImportantDayInput -> AppM ImportantDay
+createImportantDay input = do
+  today <- liftIO $ utctDay <$> getCurrentTime
+  let db = ImportantDayDb
+        { importantDayDbTitle = T.pack (importantDayInputTitle input)
+        , importantDayDbDate  = T.pack (importantDayInputDate input)
+        , importantDayDbNote  = T.pack <$> importantDayInputNote input
+        , importantDayDbKind  = T.pack (importantDayInputKind input)
+        }
+  key <- runDB $ insert db
+  return (toImportantDay today (Entity key db))
+
+updateImportantDay :: Int -> ImportantDayInput -> AppM ImportantDay
+updateImportantDay dayId input = do
+  today <- liftIO $ utctDay <$> getCurrentTime
+  let key = toSqlKey (fromIntegral dayId) :: Key ImportantDayDb
+  existing <- runDB $ get key
+  case existing of
+    Nothing -> throwError err404
+    Just _  -> do
+      let db = ImportantDayDb
+            { importantDayDbTitle = T.pack (importantDayInputTitle input)
+            , importantDayDbDate  = T.pack (importantDayInputDate input)
+            , importantDayDbNote  = T.pack <$> importantDayInputNote input
+            , importantDayDbKind  = T.pack (importantDayInputKind input)
+            }
+      runDB $ replace key db
+      return (toImportantDay today (Entity key db))
+
+deleteImportantDay :: Int -> AppM NoContent
+deleteImportantDay dayId = do
+  let key = toSqlKey (fromIntegral dayId) :: Key ImportantDayDb
   existing <- runDB $ get key
   case existing of
     Nothing -> throwError err404
@@ -287,8 +412,9 @@ uploadPhotos multipartData = liftIO $ do
 app :: ConnectionPool -> Application
 app pool =
   serve (Proxy :: Proxy FullAPI) $
-    hoistServer (Proxy :: Proxy MemoryAPI)   (`runReaderT` pool) memoryServer
-    :<|> hoistServer (Proxy :: Proxy StatsAPI) (`runReaderT` pool) getStats
+    hoistServer (Proxy :: Proxy MemoryAPI)         (`runReaderT` pool) memoryServer
+    :<|> hoistServer (Proxy :: Proxy ImportantDayAPI) (`runReaderT` pool) importantDayServer
+    :<|> hoistServer (Proxy :: Proxy StatsAPI)     (`runReaderT` pool) getStats
     :<|> uploadPhotos
     :<|> Tagged (staticApp (defaultWebAppSettings photosDir))
 

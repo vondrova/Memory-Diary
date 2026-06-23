@@ -37,10 +37,19 @@ library
       aeson
     , base >=4.7 && <5
     , bytestring
+    , directory
+    , filepath
+    , monad-logger
+    , mtl
+    , persistent
+    , persistent-postgresql
     , servant
+    , servant-multipart
     , servant-server
     , text
+    , time
     , wai
+    , wai-app-static
     , warp
   default-language: Haskell2010
 
@@ -58,9 +67,48 @@ executable backend-exe
     , backend
     , base >=4.7 && <5
     , bytestring
+    , directory
+    , filepath
+    , monad-logger
+    , mtl
+    , persistent
+    , persistent-postgresql
     , servant
+    , servant-multipart
     , servant-server
     , text
+    , time
     , wai
+    , wai-app-static
+    , warp
+  default-language: Haskell2010
+
+test-suite backend-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      LibSpec
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , backend
+    , base >=4.7 && <5
+    , bytestring
+    , directory
+    , filepath
+    , hspec
+    , monad-logger
+    , mtl
+    , persistent
+    , persistent-postgresql
+    , servant
+    , servant-multipart
+    , servant-server
+    , text
+    , time
+    , wai
+    , wai-app-static
     , warp
   default-language: Haskell2010
