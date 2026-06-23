@@ -21,8 +21,9 @@ import Control.Monad (zipWithM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Logger (runNoLoggingT)
 import Control.Monad.Reader (ReaderT, ask, runReaderT)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON, decode, object, withObject, (.=), (.:))
 import Data.ByteString.Char8 (pack)
+import qualified Data.ByteString.Lazy as LBS
 import Data.List (group, maximumBy, nub, sort, sortBy)
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Ord (Down (..), comparing)
@@ -36,6 +37,7 @@ import Database.Persist.Postgresql
 import Database.Persist.TH
 import System.Environment (lookupEnv)
 import GHC.Generics (Generic)
+import Network.HTTP.Simple (getResponseBody, httpLBS, parseRequest, setRequestHeader)
 import Network.Wai (Application)
 import Network.Wai.Application.Static (defaultWebAppSettings, staticApp)
 import Network.Wai.Handler.Warp (run)
@@ -166,6 +168,7 @@ type FullAPI =
   :<|> PlanAPI
   :<|> DiaryAPI
   :<|> StatsAPI
+  :<|> GeoAPI
   :<|> PhotoAPI
   :<|> "photos" :> Raw
 
@@ -799,6 +802,44 @@ deleteDiaryEntry entryId = do
     Nothing -> throwError err404
     Just _  -> runDB (delete key) >> return NoContent
 
+-- GEOCODING
+
+data GeoResult = GeoResult
+  { geoDisplayName :: String
+  , geoLat         :: String
+  , geoLon         :: String
+  } deriving (Show, Generic)
+
+instance ToJSON GeoResult where
+  toJSON gr = object
+    [ "displayName" .= geoDisplayName gr
+    , "lat"         .= geoLat gr
+    , "lon"         .= geoLon gr
+    ]
+
+instance FromJSON GeoResult where
+  parseJSON = withObject "GeoResult" $ \o ->
+    GeoResult <$> o .: "display_name" <*> o .: "lat" <*> o .: "lon"
+
+type GeoAPI = "api" :> "geocode" :> QueryParam "q" Text :> Get '[JSON] [GeoResult]
+
+geocode :: Maybe Text -> AppM [GeoResult]
+geocode Nothing  = return []
+geocode (Just q) = liftIO $ do
+  let encoded = concatMap encodeChar (T.unpack q)
+      url     = "https://nominatim.openstreetmap.org/search?q=" ++ encoded ++ "&format=json&limit=5"
+  req <- parseRequest url
+  let req' = setRequestHeader "User-Agent" ["MemoryDiary/1.0"] req
+  resp <- httpLBS req'
+  case decode (getResponseBody resp) :: Maybe [GeoResult] of
+    Nothing  -> return []
+    Just res -> return res
+  where
+    encodeChar ' ' = "%20"
+    encodeChar ',' = "%2C"
+    encodeChar '&' = "%26"
+    encodeChar c   = [c]
+
 app :: ConnectionPool -> Application
 app pool =
   serve (Proxy :: Proxy FullAPI) $
@@ -810,6 +851,7 @@ app pool =
     :<|> hoistServer (Proxy :: Proxy PlanAPI)         (`runReaderT` pool) planServer
     :<|> hoistServer (Proxy :: Proxy DiaryAPI)        (`runReaderT` pool) diaryServer
     :<|> hoistServer (Proxy :: Proxy StatsAPI)        (`runReaderT` pool) getStats
+    :<|> hoistServer (Proxy :: Proxy GeoAPI)          (`runReaderT` pool) geocode
     :<|> uploadPhotos
     :<|> Tagged (staticApp (defaultWebAppSettings photosDir))
 

@@ -2,6 +2,8 @@ module Main exposing (main)
 
 import Browser
 import Browser.Navigation as Nav
+import File exposing (File)
+import File.Select as Select
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit)
@@ -18,6 +20,7 @@ type Page
     = HomePage
     | TimelinePage
     | ImportantDaysPage
+    | NotesPage
     | StatsPage
     | NotFoundPage
 
@@ -45,11 +48,28 @@ type alias ImportantDay =
     }
 
 
+type alias CoupleNote =
+    { id : Maybe Int
+    , owner : String
+    , title : String
+    , body : String
+    , createdAt : String
+    }
+
+
+type alias GeoSuggestion =
+    { displayName : String
+    , lat : String
+    , lon : String
+    }
+
+
 type alias Model =
     { key : Nav.Key
     , page : Page
     , memories : List Memory
     , importantDays : List ImportantDay
+    , notes : List CoupleNote
     , searchQuery : String
     , error : Maybe String
     , formOpen : Bool
@@ -59,9 +79,15 @@ type alias Model =
     , formDescription : String
     , formLocation : String
     , formTags : String
+    , formPendingPhoto : Maybe File
+    , geoQuery : String
+    , geoSuggestions : List GeoSuggestion
     , newDayTitle : String
     , newDayDate : String
     , newDayKind : String
+    , newNoteOwner : String
+    , newNoteTitle : String
+    , newNoteBody : String
     }
 
 
@@ -70,6 +96,7 @@ type Msg
     | UrlChanged Url
     | GotMemories (Result Http.Error (List Memory))
     | GotImportantDays (Result Http.Error (List ImportantDay))
+    | GotNotes (Result Http.Error (List CoupleNote))
     | SetSearch String
     | OpenForm
     | CloseForm
@@ -79,6 +106,13 @@ type Msg
     | SetDescription String
     | SetLocation String
     | SetTags String
+    | PickPhoto
+    | PhotoPicked File
+    | PhotoUploaded (Result Http.Error (List String))
+    | SetGeoQuery String
+    | SearchGeo
+    | GotGeoSuggestions (Result Http.Error (List GeoSuggestion))
+    | SelectGeoSuggestion String
     | SubmitForm
     | MemoryCreated (Result Http.Error Memory)
     | SetNewDayTitle String
@@ -86,6 +120,11 @@ type Msg
     | SetNewDayKind String
     | SubmitNewDay
     | DayCreated (Result Http.Error ImportantDay)
+    | SetNoteOwner String
+    | SetNoteTitle String
+    | SetNoteBody String
+    | SubmitNote
+    | NoteCreated (Result Http.Error CoupleNote)
 
 
 -- ROUTING
@@ -96,6 +135,7 @@ routeParser =
         [ Parser.map HomePage top
         , Parser.map TimelinePage (Parser.s "timeline")
         , Parser.map ImportantDaysPage (Parser.s "important-days")
+        , Parser.map NotesPage (Parser.s "notes")
         , Parser.map StatsPage (Parser.s "stats")
         ]
 
@@ -113,6 +153,7 @@ init _ url key =
       , page = fromUrl url
       , memories = []
       , importantDays = []
+      , notes = []
       , searchQuery = ""
       , error = Nothing
       , formOpen = False
@@ -122,11 +163,17 @@ init _ url key =
       , formDescription = ""
       , formLocation = ""
       , formTags = ""
+      , formPendingPhoto = Nothing
+      , geoQuery = ""
+      , geoSuggestions = []
       , newDayTitle = ""
       , newDayDate = ""
       , newDayKind = "anniversary"
+      , newNoteOwner = ""
+      , newNoteTitle = ""
+      , newNoteBody = ""
       }
-    , Cmd.batch [ fetchMemories, fetchImportantDays ]
+    , Cmd.batch [ fetchMemories, fetchImportantDays, fetchNotes ]
     )
 
 
@@ -156,6 +203,12 @@ update msg model =
         GotImportantDays (Err _) ->
             ( { model | error = Just "Nepodařilo se načíst důležité dny." }, Cmd.none )
 
+        GotNotes (Ok ns) ->
+            ( { model | notes = ns }, Cmd.none )
+
+        GotNotes (Err _) ->
+            ( { model | error = Just "Nepodařilo se načíst poznámky." }, Cmd.none )
+
         SetSearch q ->
             ( { model | searchQuery = q }, Cmd.none )
 
@@ -163,7 +216,7 @@ update msg model =
             ( { model | formOpen = True }, Cmd.none )
 
         CloseForm ->
-            ( { model | formOpen = False }, Cmd.none )
+            ( { model | formOpen = False, geoSuggestions = [], geoQuery = "" }, Cmd.none )
 
         SetTitle v ->
             ( { model | formTitle = v }, Cmd.none )
@@ -178,10 +231,39 @@ update msg model =
             ( { model | formDescription = v }, Cmd.none )
 
         SetLocation v ->
-            ( { model | formLocation = v }, Cmd.none )
+            ( { model | formLocation = v, geoSuggestions = [] }, Cmd.none )
 
         SetTags v ->
             ( { model | formTags = v }, Cmd.none )
+
+        PickPhoto ->
+            ( model, Select.file [ "image/*" ] PhotoPicked )
+
+        PhotoPicked file ->
+            ( { model | formPendingPhoto = Just file }, Cmd.none )
+
+        PhotoUploaded (Ok fileNames) ->
+            ( { model | formPendingPhoto = Nothing }
+            , Cmd.none
+            )
+
+        PhotoUploaded (Err _) ->
+            ( { model | error = Just "Nepodařilo se nahrát fotografii." }, Cmd.none )
+
+        SetGeoQuery v ->
+            ( { model | geoQuery = v }, Cmd.none )
+
+        SearchGeo ->
+            ( model, searchGeo model.geoQuery )
+
+        GotGeoSuggestions (Ok suggestions) ->
+            ( { model | geoSuggestions = suggestions }, Cmd.none )
+
+        GotGeoSuggestions (Err _) ->
+            ( { model | geoSuggestions = [] }, Cmd.none )
+
+        SelectGeoSuggestion name ->
+            ( { model | formLocation = name, geoSuggestions = [], geoQuery = "" }, Cmd.none )
 
         SubmitForm ->
             ( model, createMemory model )
@@ -196,6 +278,7 @@ update msg model =
                 , formDescription = ""
                 , formLocation = ""
                 , formTags = ""
+                , formPendingPhoto = Nothing
               }
             , Cmd.none
             )
@@ -228,22 +311,54 @@ update msg model =
         DayCreated (Err _) ->
             ( { model | error = Just "Nepodařilo se uložit důležitý den." }, Cmd.none )
 
+        SetNoteOwner v ->
+            ( { model | newNoteOwner = v }, Cmd.none )
+
+        SetNoteTitle v ->
+            ( { model | newNoteTitle = v }, Cmd.none )
+
+        SetNoteBody v ->
+            ( { model | newNoteBody = v }, Cmd.none )
+
+        SubmitNote ->
+            ( model, createNote model )
+
+        NoteCreated (Ok note) ->
+            ( { model
+                | notes = model.notes ++ [ note ]
+                , newNoteOwner = ""
+                , newNoteTitle = ""
+                , newNoteBody = ""
+              }
+            , Cmd.none
+            )
+
+        NoteCreated (Err _) ->
+            ( { model | error = Just "Nepodařilo se uložit poznámku." }, Cmd.none )
+
 
 -- HTTP
 
 fetchMemories : Cmd Msg
 fetchMemories =
-    Http.get
-        { url = "/api/memories"
-        , expect = Http.expectJson GotMemories (D.list memoryDecoder)
-        }
+    Http.get { url = "/api/memories", expect = Http.expectJson GotMemories (D.list memoryDecoder) }
 
 
 fetchImportantDays : Cmd Msg
 fetchImportantDays =
+    Http.get { url = "/api/important-days", expect = Http.expectJson GotImportantDays (D.list importantDayDecoder) }
+
+
+fetchNotes : Cmd Msg
+fetchNotes =
+    Http.get { url = "/api/notes", expect = Http.expectJson GotNotes (D.list coupleNoteDecoder) }
+
+
+searchGeo : String -> Cmd Msg
+searchGeo q =
     Http.get
-        { url = "/api/important-days"
-        , expect = Http.expectJson GotImportantDays (D.list importantDayDecoder)
+        { url = "/api/geocode?q=" ++ q
+        , expect = Http.expectJson GotGeoSuggestions (D.list geoDecoder)
         }
 
 
@@ -273,6 +388,22 @@ createImportantDay model =
         }
 
 
+createNote : Model -> Cmd Msg
+createNote model =
+    Http.post
+        { url = "/api/notes"
+        , body =
+            Http.jsonBody
+                (E.object
+                    [ ( "coupleNoteInputOwner", E.string model.newNoteOwner )
+                    , ( "coupleNoteInputTitle", E.string model.newNoteTitle )
+                    , ( "coupleNoteInputBody", E.string model.newNoteBody )
+                    ]
+                )
+        , expect = Http.expectJson NoteCreated coupleNoteDecoder
+        }
+
+
 encodeMemoryInput : Model -> E.Value
 encodeMemoryInput model =
     let
@@ -283,10 +414,7 @@ encodeMemoryInput model =
                 |> List.filter (not << String.isEmpty)
 
         nullable s =
-            if String.isEmpty s then
-                E.null
-            else
-                E.string s
+            if String.isEmpty s then E.null else E.string s
     in
     E.object
         [ ( "title", E.string model.formTitle )
@@ -324,22 +452,38 @@ importantDayDecoder =
         (D.field "importantDayKind" D.string)
 
 
--- BUSINESS LOGIC ON FRONTEND (should eventually move to backend)
+coupleNoteDecoder : D.Decoder CoupleNote
+coupleNoteDecoder =
+    D.map5 CoupleNote
+        (D.maybe (D.field "coupleNoteId" D.int))
+        (D.field "coupleNoteOwner" D.string)
+        (D.field "coupleNoteTitle" D.string)
+        (D.field "coupleNoteBody" D.string)
+        (D.field "coupleNoteCreatedAt" D.string)
+
+
+geoDecoder : D.Decoder GeoSuggestion
+geoDecoder =
+    D.map3 GeoSuggestion
+        (D.field "displayName" D.string)
+        (D.field "lat" D.string)
+        (D.field "lon" D.string)
+
+
+-- BUSINESS LOGIC ON FRONTEND
 
 filterMemories : String -> List Memory -> List Memory
 filterMemories query mems =
     if String.isEmpty query then
         mems
     else
-        let
-            q = String.toLower query
+        let q = String.toLower query
         in
         List.filter
             (\m ->
                 String.contains q (String.toLower m.title)
                     || List.any (String.contains q << String.toLower) m.tags
                     || Maybe.withDefault False (Maybe.map (String.contains q << String.toLower) m.location)
-                    || Maybe.withDefault False (Maybe.map (String.contains q << String.toLower) m.description)
             )
             mems
 
@@ -347,16 +491,12 @@ filterMemories query mems =
 countTags : List Memory -> List ( String, Int )
 countTags mems =
     let
-        allTags =
-            List.concatMap .tags mems
+        allTags = List.concatMap .tags mems
 
         increment tag acc =
             case List.partition (\( k, _ ) -> k == tag) acc of
-                ( [], rest ) ->
-                    ( tag, 1 ) :: rest
-
-                ( ( k, n ) :: _, rest ) ->
-                    ( k, n + 1 ) :: rest
+                ( [], rest )           -> ( tag, 1 ) :: rest
+                ( ( k, n ) :: _, rest) -> ( k, n + 1 ) :: rest
     in
     List.foldl increment [] allTags
         |> List.sortBy (negate << Tuple.second)
@@ -370,75 +510,36 @@ parseDatetimeMinutes s =
                 ( [ y, mo, d ], [ h, mi ] ) ->
                     Maybe.map5
                         (\year month day hour minute ->
-                            year * 365 * 24 * 60
-                                + month * 30 * 24 * 60
-                                + day * 24 * 60
-                                + hour * 60
-                                + minute
+                            year * 365 * 24 * 60 + month * 30 * 24 * 60
+                                + day * 24 * 60 + hour * 60 + minute
                         )
-                        (String.toInt y)
-                        (String.toInt mo)
-                        (String.toInt d)
-                        (String.toInt h)
-                        (String.toInt mi)
-
-                _ ->
-                    Nothing
-
-        _ ->
-            Nothing
+                        (String.toInt y) (String.toInt mo) (String.toInt d)
+                        (String.toInt h) (String.toInt mi)
+                _ -> Nothing
+        _ -> Nothing
 
 
 durationMinutes : Memory -> Int
 durationMinutes mem =
     case ( parseDatetimeMinutes mem.timeFrom, parseDatetimeMinutes mem.timeTo ) of
-        ( Just f, Just t ) ->
-            Basics.max 0 (t - f)
-
-        _ ->
-            0
+        ( Just f, Just t ) -> Basics.max 0 (t - f)
+        _                  -> 0
 
 
 computeStats : List Memory -> { total : Int, count : Int, places : Int, avgMins : Int }
 computeStats mems =
     let
-        total =
-            List.sum (List.map durationMinutes mems)
-
-        places =
-            mems
-                |> List.filterMap .location
-                |> List.filter (not << String.isEmpty)
-                |> List.sort
-                |> dedupe
-                |> List.length
-
-        avg =
-            if List.isEmpty mems then 0 else total // List.length mems
+        total  = List.sum (List.map durationMinutes mems)
+        places = mems |> List.filterMap .location |> List.filter (not << String.isEmpty)
+                      |> List.sort |> dedupe |> List.length
+        avg    = if List.isEmpty mems then 0 else total // List.length mems
     in
     { total = total, count = List.length mems, places = places, avgMins = avg }
 
 
 dedupe : List String -> List String
 dedupe xs =
-    List.foldl
-        (\x acc ->
-            if List.member x acc then acc else acc ++ [ x ]
-        )
-        []
-        xs
-
-
-daysUntilFromDate : String -> String -> Int
-daysUntilFromDate todayStr dateStr =
-    let
-        todayMD = String.slice 5 10 todayStr
-        dateMD  = String.slice 5 10 dateStr
-    in
-    if dateMD >= todayMD then
-        0
-    else
-        365
+    List.foldl (\x acc -> if List.member x acc then acc else acc ++ [ x ]) [] xs
 
 
 -- VIEW
@@ -451,11 +552,8 @@ view model =
             [ viewHeader model.page
             , main_ [ class "main" ]
                 [ case model.error of
-                    Just err ->
-                        div [ class "error" ] [ text err ]
-
-                    Nothing ->
-                        text ""
+                    Just err -> div [ class "error" ] [ text err ]
+                    Nothing  -> text ""
                 , viewPage model
                 ]
             ]
@@ -471,6 +569,7 @@ viewHeader page =
             [ navLink "/" "Vzpomínky" (page == HomePage)
             , navLink "/timeline" "Timeline" (page == TimelinePage)
             , navLink "/important-days" "Důležité dny" (page == ImportantDaysPage)
+            , navLink "/notes" "Poznámky" (page == NotesPage)
             , navLink "/stats" "Statistiky" (page == StatsPage)
             ]
         ]
@@ -478,60 +577,32 @@ viewHeader page =
 
 navLink : String -> String -> Bool -> Html Msg
 navLink href_ label_ active =
-    a
-        [ href href_
-        , class
-            (if active then
-                "nav-link nav-link--active"
-             else
-                "nav-link"
-            )
-        ]
+    a [ href href_, class (if active then "nav-link nav-link--active" else "nav-link") ]
         [ text label_ ]
 
 
 viewPage : Model -> Html Msg
 viewPage model =
     case model.page of
-        HomePage ->
-            viewHome model
-
-        TimelinePage ->
-            div [ class "timeline" ]
-                (List.map viewTimelineItem model.memories)
-
-        ImportantDaysPage ->
-            viewImportantDays model
-
-        StatsPage ->
-            viewStats model
-
-        NotFoundPage ->
-            div [ class "not-found" ] [ text "Stránka nenalezena." ]
+        HomePage         -> viewHome model
+        TimelinePage     -> div [ class "timeline" ] (List.map viewTimelineItem model.memories)
+        ImportantDaysPage -> viewImportantDays model
+        NotesPage        -> viewNotes model
+        StatsPage        -> viewStats model
+        NotFoundPage     -> div [ class "not-found" ] [ text "Stránka nenalezena." ]
 
 
 viewHome : Model -> Html Msg
 viewHome model =
-    let
-        filtered =
-            filterMemories model.searchQuery model.memories
+    let filtered = filterMemories model.searchQuery model.memories
     in
     div []
         [ div [ class "page-actions" ]
-            [ input
-                [ type_ "search"
-                , placeholder "Hledat vzpomínky…"
-                , value model.searchQuery
-                , onInput SetSearch
-                , class "search-input"
-                ]
-                []
+            [ input [ type_ "search", placeholder "Hledat…", value model.searchQuery
+                    , onInput SetSearch, class "search-input" ] []
             , button [ class "btn-primary", onClick OpenForm ] [ text "+ Přidat vzpomínku" ]
             ]
-        , if model.formOpen then
-            viewForm model
-          else
-            text ""
+        , if model.formOpen then viewForm model else text ""
         , if List.isEmpty filtered then
             p [ class "empty-state" ] [ text "Žádné vzpomínky nenalezeny." ]
           else
@@ -551,11 +622,27 @@ viewForm model =
             , label [] [ text "Do" ]
             , input [ type_ "datetime-local", value model.formTimeTo, onInput SetTimeTo, required True ] []
             , label [] [ text "Místo" ]
-            , input [ type_ "text", value model.formLocation, onInput SetLocation ] []
+            , div [ class "geo-row" ]
+                [ input [ type_ "text", value model.formLocation, onInput SetLocation, placeholder "Název místa" ] []
+                , input [ type_ "text", value model.geoQuery, onInput SetGeoQuery, placeholder "Hledat na mapě…", class "geo-input" ] []
+                , button [ type_ "button", class "btn-secondary", onClick SearchGeo ] [ text "🔍" ]
+                ]
+            , if List.isEmpty model.geoSuggestions then text ""
+              else
+                div [ class "geo-suggestions" ]
+                    (List.map (\s -> div [ class "geo-suggestion", onClick (SelectGeoSuggestion s.displayName) ]
+                        [ text s.displayName ]) model.geoSuggestions)
             , label [] [ text "Tagy (oddělené čárkou)" ]
             , input [ type_ "text", value model.formTags, onInput SetTags ] []
             , label [] [ text "Popis" ]
             , textarea [ value model.formDescription, onInput SetDescription ] []
+            , label [] [ text "Fotografie" ]
+            , div [ class "photo-row" ]
+                [ button [ type_ "button", class "btn-secondary", onClick PickPhoto ] [ text "📷 Vybrat foto" ]
+                , case model.formPendingPhoto of
+                    Just f  -> span [ class "photo-name" ] [ text (File.name f) ]
+                    Nothing -> text ""
+                ]
             , div [ class "form-actions" ]
                 [ button [ type_ "submit", class "btn-primary" ] [ text "Uložit" ]
                 , button [ type_ "button", class "btn-secondary", onClick CloseForm ] [ text "Zrušit" ]
@@ -570,17 +657,11 @@ viewMemory mem =
         [ h2 [ class "memory-title" ] [ text mem.title ]
         , p [ class "memory-time" ] [ text (mem.timeFrom ++ " – " ++ mem.timeTo) ]
         , case mem.location of
-            Just loc ->
-                p [ class "memory-location" ] [ text ("📍 " ++ loc) ]
-
-            Nothing ->
-                text ""
+            Just loc -> p [ class "memory-location" ] [ text ("📍 " ++ loc) ]
+            Nothing  -> text ""
         , case mem.description of
-            Just desc ->
-                p [ class "memory-desc" ] [ text desc ]
-
-            Nothing ->
-                text ""
+            Just desc -> p [ class "memory-desc" ] [ text desc ]
+            Nothing   -> text ""
         , div [ class "memory-tags" ]
             (List.map (\t -> span [ class "tag" ] [ text t ]) mem.tags)
         ]
@@ -594,11 +675,8 @@ viewTimelineItem mem =
             [ span [ class "timeline-date" ] [ text mem.timeFrom ]
             , strong [] [ text mem.title ]
             , case mem.location of
-                Just loc ->
-                    span [ class "timeline-location" ] [ text (" · " ++ loc) ]
-
-                Nothing ->
-                    text ""
+                Just loc -> span [ class "timeline-location" ] [ text (" · " ++ loc) ]
+                Nothing  -> text ""
             ]
         ]
 
@@ -625,9 +703,7 @@ viewImportantDays model =
             p [ class "empty-state" ] [ text "Žádné důležité dny." ]
           else
             div [ class "memory-list" ]
-                (List.map viewImportantDay
-                    (List.sortBy .date model.importantDays)
-                )
+                (List.map viewImportantDay (List.sortBy .date model.importantDays))
         ]
 
 
@@ -649,14 +725,41 @@ viewImportantDay day =
         ]
 
 
+viewNotes : Model -> Html Msg
+viewNotes model =
+    div []
+        [ Html.form [ class "memory-form", onSubmit SubmitNote, style "margin-bottom" "1.5rem" ]
+            [ h2 [] [ text "Nová poznámka" ]
+            , label [] [ text "Od koho" ]
+            , input [ type_ "text", value model.newNoteOwner, onInput SetNoteOwner, required True ] []
+            , label [] [ text "Nadpis" ]
+            , input [ type_ "text", value model.newNoteTitle, onInput SetNoteTitle, required True ] []
+            , label [] [ text "Text" ]
+            , textarea [ value model.newNoteBody, onInput SetNoteBody, required True ] []
+            , div [ class "form-actions" ]
+                [ button [ type_ "submit", class "btn-primary" ] [ text "Uložit" ] ]
+            ]
+        , if List.isEmpty model.notes then
+            p [ class "empty-state" ] [ text "Žádné poznámky." ]
+          else
+            div [ class "memory-list" ] (List.map viewNote model.notes)
+        ]
+
+
+viewNote : CoupleNote -> Html Msg
+viewNote note =
+    div [ class "memory-card" ]
+        [ h2 [ class "memory-title" ] [ text note.title ]
+        , p [ class "memory-time" ] [ text (note.owner ++ "  ·  " ++ note.createdAt) ]
+        , p [ class "memory-desc" ] [ text note.body ]
+        ]
+
+
 viewStats : Model -> Html Msg
 viewStats model =
     let
-        stats =
-            computeStats model.memories
-
-        topTags =
-            List.take 5 (countTags model.memories)
+        stats   = computeStats model.memories
+        topTags = List.take 5 (countTags model.memories)
     in
     div [ class "stats-page" ]
         [ h2 [] [ text "Statistiky" ]
@@ -671,20 +774,17 @@ viewStats model =
             p [] [ text "Žádné tagy." ]
           else
             ul [ class "tag-list" ]
-                (List.map
-                    (\( tag, count ) ->
-                        li [] [ span [ class "tag" ] [ text tag ], text (" × " ++ String.fromInt count) ]
-                    )
-                    topTags
-                )
+                (List.map (\( tag, count ) ->
+                    li [] [ span [ class "tag" ] [ text tag ], text (" × " ++ String.fromInt count) ]
+                ) topTags)
         ]
 
 
 statCard : String -> String -> Html Msg
-statCard label value =
+statCard label_ value_ =
     div [ class "stat-card" ]
-        [ div [ class "stat-value" ] [ text value ]
-        , div [ class "stat-label" ] [ text label ]
+        [ div [ class "stat-value" ] [ text value_ ]
+        , div [ class "stat-label" ] [ text label_ ]
         ]
 
 

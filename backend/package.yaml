@@ -26,6 +26,7 @@ dependencies:
 - servant-server
 - text
 - time
+- http-conduit
 - wai
 - wai-app-static
 - warp
