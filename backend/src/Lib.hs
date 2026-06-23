@@ -15,7 +15,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Lib (startApp, durMins, topN, splitComma, joinComma, computeNextOccurrence, parseDay, monthDay) where
+module Lib (startApp, Memory(..), durMins, topN, splitComma, joinComma, computeNextOccurrence, parseDay, monthDay, computeStats, Stats(..)) where
 
 import Control.Monad (zipWithM)
 import Control.Monad.IO.Class (liftIO)
@@ -67,6 +67,27 @@ RelationshipDb
   partner2  Text
   startDate Text
   note      Text Maybe
+  deriving Show
+
+CoupleNoteDb
+  owner     Text
+  title     Text
+  body      Text
+  createdAt Text
+  deriving Show
+
+CouplePlanDb
+  category Text
+  title    Text
+  detail   Text Maybe
+  done     Bool
+  deriving Show
+
+DiaryEntryDb
+  date    Text
+  mood    Text Maybe
+  body    Text
+  weather Text Maybe
   deriving Show
 |]
 
@@ -136,7 +157,17 @@ type MemoryAPI =
 
 type PhotoAPI = "api" :> "photos" :> MultipartForm Tmp (MultipartData Tmp) :> Post '[JSON] [String]
 
-type FullAPI = MemoryAPI :<|> ImportantDayAPI :<|> RelationshipAPI :<|> OnThisDayAPI :<|> StatsAPI :<|> PhotoAPI :<|> "photos" :> Raw
+type FullAPI =
+       MemoryAPI
+  :<|> ImportantDayAPI
+  :<|> RelationshipAPI
+  :<|> OnThisDayAPI
+  :<|> NoteAPI
+  :<|> PlanAPI
+  :<|> DiaryAPI
+  :<|> StatsAPI
+  :<|> PhotoAPI
+  :<|> "photos" :> Raw
 
 memoryServer :: ServerT MemoryAPI AppM
 memoryServer =
@@ -532,14 +563,253 @@ uploadPhotos multipartData = liftIO $ do
       copyFile (fdPayload fd) dest
       return name
 
+-- COUPLE NOTES
+
+data CoupleNote = CoupleNote
+  { coupleNoteId        :: Maybe Int
+  , coupleNoteOwner     :: String
+  , coupleNoteTitle     :: String
+  , coupleNoteBody      :: String
+  , coupleNoteCreatedAt :: String
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON CoupleNote
+instance ToJSON CoupleNote
+
+data CoupleNoteInput = CoupleNoteInput
+  { coupleNoteInputOwner :: String
+  , coupleNoteInputTitle :: String
+  , coupleNoteInputBody  :: String
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON CoupleNoteInput
+instance ToJSON CoupleNoteInput
+
+toCoupleNote :: Entity CoupleNoteDb -> CoupleNote
+toCoupleNote (Entity key db) = CoupleNote
+  { coupleNoteId        = Just (fromIntegral (fromSqlKey key))
+  , coupleNoteOwner     = T.unpack (coupleNoteDbOwner db)
+  , coupleNoteTitle     = T.unpack (coupleNoteDbTitle db)
+  , coupleNoteBody      = T.unpack (coupleNoteDbBody db)
+  , coupleNoteCreatedAt = T.unpack (coupleNoteDbCreatedAt db)
+  }
+
+type NoteAPI =
+       "api" :> "notes" :> Get '[JSON] [CoupleNote]
+  :<|> "api" :> "notes" :> ReqBody '[JSON] CoupleNoteInput :> Post '[JSON] CoupleNote
+  :<|> "api" :> "notes" :> Capture "id" Int :> ReqBody '[JSON] CoupleNoteInput :> Put '[JSON] CoupleNote
+  :<|> "api" :> "notes" :> Capture "id" Int :> Delete '[JSON] NoContent
+
+noteServer :: ServerT NoteAPI AppM
+noteServer = getNotes :<|> createNote :<|> updateNote :<|> deleteNote
+
+getNotes :: AppM [CoupleNote]
+getNotes = map toCoupleNote <$> runDB (selectList [] [Desc CoupleNoteDbCreatedAt])
+
+createNote :: CoupleNoteInput -> AppM CoupleNote
+createNote input = do
+  now <- liftIO $ formatTime defaultTimeLocale "%Y-%m-%dT%H:%M" <$> getCurrentTime
+  let db = CoupleNoteDb
+        { coupleNoteDbOwner     = T.pack (coupleNoteInputOwner input)
+        , coupleNoteDbTitle     = T.pack (coupleNoteInputTitle input)
+        , coupleNoteDbBody      = T.pack (coupleNoteInputBody input)
+        , coupleNoteDbCreatedAt = T.pack now
+        }
+  key <- runDB $ insert db
+  return (toCoupleNote (Entity key db))
+
+updateNote :: Int -> CoupleNoteInput -> AppM CoupleNote
+updateNote noteId input = do
+  let key = toSqlKey (fromIntegral noteId) :: Key CoupleNoteDb
+  existing <- runDB $ get key
+  case existing of
+    Nothing -> throwError err404
+    Just e  -> do
+      let db = e
+            { coupleNoteDbOwner = T.pack (coupleNoteInputOwner input)
+            , coupleNoteDbTitle = T.pack (coupleNoteInputTitle input)
+            , coupleNoteDbBody  = T.pack (coupleNoteInputBody input)
+            }
+      runDB $ replace key db
+      return (toCoupleNote (Entity key db))
+
+deleteNote :: Int -> AppM NoContent
+deleteNote noteId = do
+  let key = toSqlKey (fromIntegral noteId) :: Key CoupleNoteDb
+  existing <- runDB $ get key
+  case existing of
+    Nothing -> throwError err404
+    Just _  -> runDB (delete key) >> return NoContent
+
+-- COUPLE PLANS
+
+data CouplePlan = CouplePlan
+  { couplePlanId       :: Maybe Int
+  , couplePlanCategory :: String
+  , couplePlanTitle    :: String
+  , couplePlanDetail   :: Maybe String
+  , couplePlanDone     :: Bool
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON CouplePlan
+instance ToJSON CouplePlan
+
+data CouplePlanInput = CouplePlanInput
+  { couplePlanInputCategory :: String
+  , couplePlanInputTitle    :: String
+  , couplePlanInputDetail   :: Maybe String
+  , couplePlanInputDone     :: Bool
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON CouplePlanInput
+instance ToJSON CouplePlanInput
+
+toCouplePlan :: Entity CouplePlanDb -> CouplePlan
+toCouplePlan (Entity key db) = CouplePlan
+  { couplePlanId       = Just (fromIntegral (fromSqlKey key))
+  , couplePlanCategory = T.unpack (couplePlanDbCategory db)
+  , couplePlanTitle    = T.unpack (couplePlanDbTitle db)
+  , couplePlanDetail   = T.unpack <$> couplePlanDbDetail db
+  , couplePlanDone     = couplePlanDbDone db
+  }
+
+type PlanAPI =
+       "api" :> "plans" :> Get '[JSON] [CouplePlan]
+  :<|> "api" :> "plans" :> ReqBody '[JSON] CouplePlanInput :> Post '[JSON] CouplePlan
+  :<|> "api" :> "plans" :> Capture "id" Int :> ReqBody '[JSON] CouplePlanInput :> Put '[JSON] CouplePlan
+  :<|> "api" :> "plans" :> Capture "id" Int :> Delete '[JSON] NoContent
+
+planServer :: ServerT PlanAPI AppM
+planServer = getPlans :<|> createPlan :<|> updatePlan :<|> deletePlan
+
+getPlans :: AppM [CouplePlan]
+getPlans = map toCouplePlan <$> runDB (selectList [] [Asc CouplePlanDbCategory])
+
+createPlan :: CouplePlanInput -> AppM CouplePlan
+createPlan input = do
+  let db = CouplePlanDb
+        { couplePlanDbCategory = T.pack (couplePlanInputCategory input)
+        , couplePlanDbTitle    = T.pack (couplePlanInputTitle input)
+        , couplePlanDbDetail   = T.pack <$> couplePlanInputDetail input
+        , couplePlanDbDone     = couplePlanInputDone input
+        }
+  key <- runDB $ insert db
+  return (toCouplePlan (Entity key db))
+
+updatePlan :: Int -> CouplePlanInput -> AppM CouplePlan
+updatePlan planId input = do
+  let key = toSqlKey (fromIntegral planId) :: Key CouplePlanDb
+  existing <- runDB $ get key
+  case existing of
+    Nothing -> throwError err404
+    Just _  -> do
+      let db = CouplePlanDb
+            { couplePlanDbCategory = T.pack (couplePlanInputCategory input)
+            , couplePlanDbTitle    = T.pack (couplePlanInputTitle input)
+            , couplePlanDbDetail   = T.pack <$> couplePlanInputDetail input
+            , couplePlanDbDone     = couplePlanInputDone input
+            }
+      runDB $ replace key db
+      return (toCouplePlan (Entity key db))
+
+deletePlan :: Int -> AppM NoContent
+deletePlan planId = do
+  let key = toSqlKey (fromIntegral planId) :: Key CouplePlanDb
+  existing <- runDB $ get key
+  case existing of
+    Nothing -> throwError err404
+    Just _  -> runDB (delete key) >> return NoContent
+
+-- DIARY ENTRIES
+
+data DiaryEntry = DiaryEntry
+  { diaryEntryId      :: Maybe Int
+  , diaryEntryDate    :: String
+  , diaryEntryMood    :: Maybe String
+  , diaryEntryBody    :: String
+  , diaryEntryWeather :: Maybe String
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON DiaryEntry
+instance ToJSON DiaryEntry
+
+data DiaryEntryInput = DiaryEntryInput
+  { diaryEntryInputDate    :: String
+  , diaryEntryInputMood    :: Maybe String
+  , diaryEntryInputBody    :: String
+  , diaryEntryInputWeather :: Maybe String
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON DiaryEntryInput
+instance ToJSON DiaryEntryInput
+
+toDiaryEntry :: Entity DiaryEntryDb -> DiaryEntry
+toDiaryEntry (Entity key db) = DiaryEntry
+  { diaryEntryId      = Just (fromIntegral (fromSqlKey key))
+  , diaryEntryDate    = T.unpack (diaryEntryDbDate db)
+  , diaryEntryMood    = T.unpack <$> diaryEntryDbMood db
+  , diaryEntryBody    = T.unpack (diaryEntryDbBody db)
+  , diaryEntryWeather = T.unpack <$> diaryEntryDbWeather db
+  }
+
+type DiaryAPI =
+       "api" :> "diary" :> Get '[JSON] [DiaryEntry]
+  :<|> "api" :> "diary" :> ReqBody '[JSON] DiaryEntryInput :> Post '[JSON] DiaryEntry
+  :<|> "api" :> "diary" :> Capture "id" Int :> ReqBody '[JSON] DiaryEntryInput :> Put '[JSON] DiaryEntry
+  :<|> "api" :> "diary" :> Capture "id" Int :> Delete '[JSON] NoContent
+
+diaryServer :: ServerT DiaryAPI AppM
+diaryServer = getDiaryEntries :<|> createDiaryEntry :<|> updateDiaryEntry :<|> deleteDiaryEntry
+
+getDiaryEntries :: AppM [DiaryEntry]
+getDiaryEntries = map toDiaryEntry <$> runDB (selectList [] [Desc DiaryEntryDbDate])
+
+createDiaryEntry :: DiaryEntryInput -> AppM DiaryEntry
+createDiaryEntry input = do
+  let db = DiaryEntryDb
+        { diaryEntryDbDate    = T.pack (diaryEntryInputDate input)
+        , diaryEntryDbMood    = T.pack <$> diaryEntryInputMood input
+        , diaryEntryDbBody    = T.pack (diaryEntryInputBody input)
+        , diaryEntryDbWeather = T.pack <$> diaryEntryInputWeather input
+        }
+  key <- runDB $ insert db
+  return (toDiaryEntry (Entity key db))
+
+updateDiaryEntry :: Int -> DiaryEntryInput -> AppM DiaryEntry
+updateDiaryEntry entryId input = do
+  let key = toSqlKey (fromIntegral entryId) :: Key DiaryEntryDb
+  existing <- runDB $ get key
+  case existing of
+    Nothing -> throwError err404
+    Just _  -> do
+      let db = DiaryEntryDb
+            { diaryEntryDbDate    = T.pack (diaryEntryInputDate input)
+            , diaryEntryDbMood    = T.pack <$> diaryEntryInputMood input
+            , diaryEntryDbBody    = T.pack (diaryEntryInputBody input)
+            , diaryEntryDbWeather = T.pack <$> diaryEntryInputWeather input
+            }
+      runDB $ replace key db
+      return (toDiaryEntry (Entity key db))
+
+deleteDiaryEntry :: Int -> AppM NoContent
+deleteDiaryEntry entryId = do
+  let key = toSqlKey (fromIntegral entryId) :: Key DiaryEntryDb
+  existing <- runDB $ get key
+  case existing of
+    Nothing -> throwError err404
+    Just _  -> runDB (delete key) >> return NoContent
+
 app :: ConnectionPool -> Application
 app pool =
   serve (Proxy :: Proxy FullAPI) $
-    hoistServer (Proxy :: Proxy MemoryAPI)           (`runReaderT` pool) memoryServer
-    :<|> hoistServer (Proxy :: Proxy ImportantDayAPI)   (`runReaderT` pool) importantDayServer
-    :<|> hoistServer (Proxy :: Proxy RelationshipAPI)   (`runReaderT` pool) relationshipServer
-    :<|> hoistServer (Proxy :: Proxy OnThisDayAPI)      (`runReaderT` pool) getOnThisDay
-    :<|> hoistServer (Proxy :: Proxy StatsAPI)       (`runReaderT` pool) getStats
+    hoistServer (Proxy :: Proxy MemoryAPI)          (`runReaderT` pool) memoryServer
+    :<|> hoistServer (Proxy :: Proxy ImportantDayAPI) (`runReaderT` pool) importantDayServer
+    :<|> hoistServer (Proxy :: Proxy RelationshipAPI) (`runReaderT` pool) relationshipServer
+    :<|> hoistServer (Proxy :: Proxy OnThisDayAPI)    (`runReaderT` pool) getOnThisDay
+    :<|> hoistServer (Proxy :: Proxy NoteAPI)         (`runReaderT` pool) noteServer
+    :<|> hoistServer (Proxy :: Proxy PlanAPI)         (`runReaderT` pool) planServer
+    :<|> hoistServer (Proxy :: Proxy DiaryAPI)        (`runReaderT` pool) diaryServer
+    :<|> hoistServer (Proxy :: Proxy StatsAPI)        (`runReaderT` pool) getStats
     :<|> uploadPhotos
     :<|> Tagged (staticApp (defaultWebAppSettings photosDir))
 
