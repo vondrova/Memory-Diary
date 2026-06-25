@@ -15,22 +15,29 @@ viewTrash model =
     in
     div []
         [ h2 [ style "margin-bottom" "1rem" ] [ text (t "trash_title") ]
-        , if List.isEmpty model.trashedMemories then
-            p [ class "empty-state" ] [ text (t "trash_empty") ]
+        , case model.trash of
+            Loading ->
+                p [] [ text (t "Loading…") ]
 
-          else
-            div [ class "memory-list" ]
-                (List.map
-                    (\mem ->
-                        div [ class "memory-card memory-card--trashed" ]
-                            [ div [ class "memory-card-header" ]
-                                [ h2 [ class "memory-title" ] [ text mem.title ]
-                                , button [ class "btn-secondary", onClick (RestoreMemory mem.id) ]
-                                    [ text (t "restore") ]
+            Failed _ ->
+                p [] [ text (t "Could not load trash.") ]
+
+            Loaded [] ->
+                p [ class "empty-state" ] [ text (t "trash_empty") ]
+
+            Loaded entries ->
+                div [ class "memory-list" ]
+                    (List.map
+                        (\mem ->
+                            div [ class "memory-card memory-card--trashed" ]
+                                [ div [ class "memory-card-header" ]
+                                    [ h2 [ class "memory-title" ] [ text mem.name ]
+                                    , button [ class "btn-secondary", onClick (RestoreTrashItem mem.id) ]
+                                        [ text (t "restore") ]
+                                    ]
+                                , p [ class "memory-time" ] [ text mem.deletedAt ]
                                 ]
-                            , p [ class "memory-time" ] [ text mem.timeFrom ]
-                            ]
+                        )
+                        entries
                     )
-                    model.trashedMemories
-                )
         ]
