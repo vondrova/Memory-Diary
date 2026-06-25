@@ -5,6 +5,8 @@ services:
       POSTGRES_DB: memory_diary
       POSTGRES_USER: memory_diary
       POSTGRES_PASSWORD: memory_diary
+    ports:
+      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     restart: unless-stopped

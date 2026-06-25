@@ -8,6 +8,6 @@
     "build:clean": "npm --prefix frontend run build:clean",
     "test:frontend": "npm --prefix frontend run test:frontend",
     "backend:build": "stack --stack-yaml backend/stack.yaml build",
-    "start": "env PORT=${PORT:-3001} DATABASE_URL=${DATABASE_URL:-postgresql://memory_diary:memory_diary@localhost:5432/memory_diary} STATIC_PATH=frontend PHOTOS_PATH=photos stack --stack-yaml backend/stack.yaml exec backend-exe"
+    "start": "env PORT=${PORT:-3000} DATABASE_URL=${DATABASE_URL:-postgresql://memory_diary:memory_diary@localhost:5432/memory_diary} STATIC_PATH=frontend PHOTOS_PATH=photos stack --stack-yaml backend/stack.yaml exec backend-exe"
   }
 }
